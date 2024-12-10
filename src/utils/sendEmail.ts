@@ -1,18 +1,19 @@
 import nodemailer from 'nodemailer';
+import environment from '../config/env';
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
   auth: {
-    user: 'your-email@gmail.com',
-    pass: 'your-password'
+    user: environment.EMAIL,
+    pass: environment.EMAIL_PASS
   }
 });
 
 export const sendOTP = (otp:string, email:string) => {
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: environment.EMAIL,
     to: email,
     subject: 'OTP for Verification',
     text: `Your OTP is: ${otp}`
