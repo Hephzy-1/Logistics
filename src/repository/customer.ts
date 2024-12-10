@@ -30,6 +30,10 @@ export class CustomerRepository {
     return await Customer.findOne({ email });
   }
 
+  static async getCustomerByGoogleId (googleId: number) {
+    return await Customer.findOne({ googleId });
+  }
+
   static async getCustomerById (id: string) {
     return await Customer.findById(id);
   }

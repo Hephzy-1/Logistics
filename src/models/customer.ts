@@ -4,7 +4,7 @@ export interface ICustomer extends Document {
   name: string;
   email: string;
   password?: string;
-  googleId?: string;
+  googleId?: number;
   phoneNumber: string;
   isVerified: boolean;
   token: string;
@@ -21,7 +21,7 @@ const customerSchema = new Schema<ICustomer>({
       return !this.googleId;
     }
    },
-  googleId: { type: String, unique: true },
+  googleId: { type: Number, unique: true },
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },

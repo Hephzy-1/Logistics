@@ -10,6 +10,10 @@ export class Customer {
     return await CustomerRepository.getCustomerByEmail(email);
   }
 
+  static async customerByGoogleId (googleId: string) {
+    return await CustomerRepository.getCustomerByEmail(googleId);
+  }
+
   static async customerById (id: string) {
     return await CustomerRepository.getCustomerById(id);
   }

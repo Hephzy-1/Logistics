@@ -1,12 +1,10 @@
 // src/config/passport.ts
 import passport from 'passport';
-import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { comparePassword } from '../utils/hash';
 import Customer from '../models/customer';
-import environment from './env';
 import Vendor from '../models/vendor';
 import Rider from '../models/rider';
+import environment from './env';
 
 passport.use(
   new GoogleStrategy(
@@ -14,8 +12,9 @@ passport.use(
       clientID: environment.CLIENT_ID!,
       clientSecret: environment.CLIENT_SECRET!,
       callbackURL: 'http://localhost:4080/api/v1/auth/google/callback',
+      passReqToCallback: true, // Enables passing the request to the callback
     },
-    async (token: string, tokenSecret: string, profile: any, done: any) => {
+    async (req, token, tokenSecret, profile, done) => {
       try {
         console.log('Google profile:', profile);
 
@@ -29,24 +28,27 @@ passport.use(
           return done(null, user);
         }
 
-        // Decide model based on some explicit logic (update this logic as per your app's requirement)
-        const email = profile.emails?.[0]?.value;
-        const role = profile._json?.role; // Example: custom field in Google user info
+        // Determine model based on the URL path
+        const path = req.baseUrl; // Get the base URL
         let Model;
 
-        if (role === 'customer') Model = Customer;
-        else if (role === 'vendor') Model = Vendor;
-        else if (role === 'rider') Model = Rider;
-        else {
-          return done(null, false, { message: 'Invalid user role' });
+        if (path.includes('/customer')) {
+          Model = Customer;
+        } else if (path.includes('/vendor')) {
+          Model = Vendor;
+        } else if (path.includes('/rider')) {
+          Model = Rider;
+        } else {
+          return done(null, false, { message: 'Invalid user role in URL path' });
         }
 
         // Create a new user if none exists
+        const email = profile.emails?.[0]?.value;
         const newUser = new Model({
           googleId: profile.id,
           email,
           name: profile.displayName || 'Anonymous',
-          isVerified: profile.email_verified || false,
+          // isVerified: profile.ver || false,
         });
 
         await newUser.save();

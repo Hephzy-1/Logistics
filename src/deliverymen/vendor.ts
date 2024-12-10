@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, oAuth, register, resendOTP, verifyOTP } from '../handlers/auth';
+import { login, oAuth, register, resendOTP, verifyOTP } from '../handlers/vendor';
 import passport from '../config/google';
 
 const route = express.Router();
