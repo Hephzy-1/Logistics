@@ -6,7 +6,9 @@ import passport from "passport";
 import session from "express-session";
 import environment from './config/env';
 import { ErrorResponse } from "./utils/errorResponse";
-import authRoute from './deliverymen/auth';
+import customerRoute from './deliverymen/customer';
+import vendorRoute from './deliverymen/vendor';
+import riderRoute from './deliverymen/rider';
 
 const app = express();
 
@@ -25,7 +27,9 @@ app.get('/', asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json({ message: "Welcome" });
 }));
 
-app.use('/api/v1/auth', authRoute);
+app.use('/api/v1/customer', customerRoute);
+app.use('/api/v1/vendor', vendorRoute);
+app.use('/api/v1/rider', riderRoute);
 
 app.use(errorHandler);
 
