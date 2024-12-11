@@ -10,12 +10,20 @@ export class Customer {
     return await CustomerRepository.getCustomerByEmail(email);
   }
 
-  static async customerByGoogleId (googleId: string) {
-    return await CustomerRepository.getCustomerByEmail(googleId);
+  static async customerByToken (token: string) {
+    return await CustomerRepository.getCustomerByToken(token);
+  }
+
+  static async customerByResetToken (token: string) {
+    return await CustomerRepository.getCustomerByToken(token);
   }
 
   static async customerById (id: string) {
     return await CustomerRepository.getCustomerById(id);
+  }
+  
+  static async updatePassword (id: string, password: string) {
+    return await CustomerRepository.updateCustomerPassword(id, password);
   }
 
 }

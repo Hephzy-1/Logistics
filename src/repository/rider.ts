@@ -34,7 +34,21 @@ export class RiderRepository {
     return await Rider.findById(id);
   }
 
-  static async getRiderOTPById (id: string) {
-    return await Rider.findById(id).select("+otp otpExpires")
-  }
+  static async getRiderByToken (token: string) {
+    return await Rider.findOne({ token })
+  };
+
+  static async updateRiderPassword (id: string, password: string) {
+    const hash = await hashPassword(password);
+
+    const rider = await Rider.updateOne({
+      _id: id
+    }, {
+      $set: {
+        password: hash
+      }
+    });
+
+    return rider;
+  };
 }

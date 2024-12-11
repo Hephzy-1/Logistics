@@ -30,15 +30,29 @@ export class CustomerRepository {
     return await Customer.findOne({ email });
   }
 
-  static async getCustomerByGoogleId (googleId: number) {
-    return await Customer.findOne({ googleId });
+  static async getCustomerByToken (token: string) {
+    return await Customer.findOne({ token });
+  }
+
+  static async getCustomerByResetToken (token: string) {
+    return await Customer.findOne({ resetToken: token });
   }
 
   static async getCustomerById (id: string) {
     return await Customer.findById(id);
   }
 
-  static async getCustomerOTPById (id: string) {
-    return await Customer.findById(id).select("+otp otpExpires")
-  }
+  static async updateCustomerPassword (id: string, password: string) {
+    const hash = await hashPassword(password);
+
+    const customer = await Customer.updateOne({
+      _id: id
+    }, {
+      $set: {
+        password: hash
+      }
+    });
+
+    return customer;
+  };
 }

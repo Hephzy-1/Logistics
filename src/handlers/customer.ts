@@ -4,10 +4,10 @@ import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
-import { loginUser, registerUser, verifyOTPInput } from "../validators/auth";
+import { loginUser, registerUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators/auth";
 import passport from '../config/google';
 import crypto from 'crypto';
-import { sendOTP } from "../utils/sendEmail";
+import { sendOTP, sendResetLink } from "../utils/sendEmail";
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerUser.validate(req.body);
@@ -29,7 +29,7 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const newCustomer = await Customer.create(value);
 
-  const sent = sendOTP(newCustomer.otp, email)
+  const sent = await sendOTP(newCustomer.otp, email)
 
   return res.status(201).json({
     success: true,
@@ -89,7 +89,7 @@ export const resendOTP = asyncHandler(async (req, res, next) => {
   customer.otpExpires = expiry;
   await customer.save();
 
-  const sent = sendOTP(newOTP, customer.email);
+  const sent = await sendOTP(newOTP, customer.email);
 
   // Respond with success 
   res.status(200).json({
@@ -140,8 +140,8 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
 
   // Mark the customer as verified
   customer.isVerified = true;
-  customer.otp = null; // Clear the OTP
-  customer.otpExpires = null; // Clear OTP expiry
+  customer.otp = undefined; // Clear the OTP
+  customer.otpExpires = undefined; // Clear OTP expiry
   await customer.save();
 
   res.status(200).json({
@@ -150,7 +150,7 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
   });
 });
 
-export function oAuth(req: Request, res: Response, next: NextFunction) {
+export async function oAuth(req: Request, res: Response, next: NextFunction) {
   passport.authenticate(
     'google',
     { scope: ['profile', 'email'], session: false },
@@ -193,3 +193,112 @@ export function oAuth(req: Request, res: Response, next: NextFunction) {
     }
   )(req, res, next);
 }
+
+export const forgetPassword = asyncHandler(async (req, res, next) => {
+  const { error, value } = resetLink.validate(req.body); 
+
+  if (error) {
+    console.error(error.message);
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { email } = value;
+
+  const exists = await Customer.customerByEmail(email);
+  
+  if (!exists) {
+    throw next( new ErrorResponse("This customer doesn't exists", 404));
+  }
+
+  const resetToken = await generateToken(email);
+  const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
+
+
+  exists.resetToken = resetToken;
+  exists.resetTokenExpires = expiry;
+  await exists.save();
+
+  const sendMail = await sendResetLink(resetToken, email, exists.id, 'customer');
+
+  return res.status(200).json({
+    success: true,
+    message: 'Reset link has been sent',
+    token: resetToken,
+    sentMail: sendMail
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  const { id, token } = req.params;
+
+  if (!token) {
+    console.error('Token is required');
+    throw next(new ErrorResponse("Reset Token is required", 401));
+  }
+
+  const user = await Customer.customerById(id);
+
+  if (!user) {
+    throw next(new ErrorResponse('No user found', 404));
+  }
+
+  if (user.resetToken !== token) {
+    
+  }
+  const { error, value } = resetPass.validate(req.body);
+
+  if (error) {
+    console.error(error.message);
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { newPassword, confirmPassword } = value;
+
+  if (confirmPassword !== newPassword) {
+    throw next(new ErrorResponse("Passwords don't match", 400));
+  }
+
+  const update = await Customer.updatePassword(id, newPassword);
+
+  return res.status(203).json({
+    success: true,
+    message: 'Password has been updated',
+    data: update
+  })
+});
+
+export const updatePassword = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const { error, value } = updatePass.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { oldPassword, newPassword, confirmPassword } = value;
+
+  const user = await Customer.customerById(id);
+
+  if (!user || !user.password) {
+    throw next(new ErrorResponse('User password not found', 404));
+  }
+
+  const compare = await comparePassword(oldPassword, user.password);
+
+  if (!compare) {
+    throw next(new ErrorResponse('Invalid password', 400));
+  }
+
+  if (confirmPassword !== newPassword) {
+    throw next(new ErrorResponse("Passwords don't match", 400));
+  }
+
+  const update = await Customer.updatePassword(id, newPassword);
+  
+  return res.status(203).json({
+    success: true,
+    message: 'Password has been updated',
+    data: update
+  })
+});

@@ -8,8 +8,11 @@ export interface ICustomer extends Document {
   phoneNumber: string;
   isVerified: boolean;
   token: string;
-  otp: string | null;
-  otpExpires: Date | null;
+  otp?: string;
+  otpExpires?: Date;
+  profilePic?: string;
+  resetToken?: string;
+  resetTokenExpires?: Date;
 } 
 
 const customerSchema = new Schema<ICustomer>({
@@ -25,8 +28,10 @@ const customerSchema = new Schema<ICustomer>({
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
-  otp: { type: String, default: null },
-  otpExpires: { type: Date, default: null }
+  otp: String,
+  otpExpires: Date ,
+  resetToken: String,
+  resetTokenExpires: Date
 },
 {
   toJSON: {

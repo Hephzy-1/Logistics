@@ -1,13 +1,13 @@
 import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Vendor } from "../usecases/vendor";
-import { loginUser, registerUser, verifyOTPInput } from '../validators/auth';
+import { loginUser, registerUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
 import { comparePassword } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
 import { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
-import { sendOTP } from '../utils/sendEmail';
+import { sendOTP, sendResetLink } from '../utils/sendEmail';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerUser.validate(req.body);
@@ -96,7 +96,8 @@ export const resendOTP = asyncHandler(async (req, res, next) => {
     success: true,
     message: "New OTP has been sent",
     otp: newOTP,
-    data: vendor.otp 
+    data: vendor.otp,
+    sent 
   });
 });
 
@@ -139,8 +140,8 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
 
   // Mark the vendor as verified
   vendor.isVerified = true;
-  vendor.otp = null; // Clear the OTP
-  vendor.otpExpires = null; // Clear OTP expiry
+  vendor.otp = undefined; // Clear the OTP
+  vendor.otpExpires = undefined; // Clear OTP expiry
   await vendor.save();
 
   res.status(200).json({
@@ -192,3 +193,112 @@ export function oAuth(req: Request, res: Response, next: NextFunction) {
     }
   )(req, res, next);
 }
+
+export const forgetPassword = asyncHandler(async (req, res, next) => {
+  const { error, value } = resetLink.validate(req.body); 
+
+  if (error) {
+    console.error(error.message);
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { email } = value;
+
+  const exists = await Vendor.vendorByEmail(email);
+  
+  if (!exists) {
+    throw next( new ErrorResponse("This Vendor doesn't exists", 404));
+  }
+
+  const resetToken = await generateToken(email);
+  const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
+
+
+  exists.resetToken = resetToken;
+  exists.resetTokenExpires = expiry;
+  await exists.save();
+
+  const sendMail = await sendResetLink(resetToken, email, exists.id, 'Vendor');
+
+  return res.status(200).json({
+    success: true,
+    message: 'Reset link has been sent',
+    token: resetToken,
+    sentMail: sendMail
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  const { id, token } = req.params;
+
+  if (!token) {
+    console.error('Token is required');
+    throw next(new ErrorResponse("Reset Token is required", 401));
+  }
+
+  const user = await Vendor.vendorById(id);
+
+  if (!user) {
+    throw next(new ErrorResponse('No user found', 404));
+  }
+
+  if (user.resetToken !== token) {
+    
+  }
+  const { error, value } = resetPass.validate(req.body);
+
+  if (error) {
+    console.error(error.message);
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { newPassword, confirmPassword } = value;
+
+  if (confirmPassword !== newPassword) {
+    throw next(new ErrorResponse("Passwords don't match", 400));
+  }
+
+  const update = await Vendor.updatePassword(id, newPassword);
+
+  return res.status(203).json({
+    success: true,
+    message: 'Password has been updated',
+    data: update
+  })
+});
+
+export const updatePassword = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const { error, value } = updatePass.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { oldPassword, newPassword, confirmPassword } = value;
+
+  const user = await Vendor.vendorById(id);
+
+  if (!user || !user.password) {
+    throw next(new ErrorResponse('User password not found', 404));
+  }
+
+  const compare = await comparePassword(oldPassword, user.password);
+
+  if (!compare) {
+    throw next(new ErrorResponse('Invalid password', 400));
+  }
+
+  if (confirmPassword !== newPassword) {
+    throw next(new ErrorResponse("Passwords don't match", 400));
+  }
+
+  const update = await Vendor.updatePassword(id, newPassword);
+  
+  return res.status(203).json({
+    success: true,
+    message: 'Password has been updated',
+    data: update
+  })
+});

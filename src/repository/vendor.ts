@@ -36,7 +36,21 @@ export class VendorRepository {
     return await Vendor.findById(id);
   }
 
-  static async getVendorOTPById (id: string) {
-    return await Vendor.findById(id).select("+otp otpExpires")
-  }
+  static async getVendorByToken (token: string) {
+    return await Vendor.findById({ token })
+  };
+
+  static async updateVendorPassword (id: string, password: string) {
+    const hash = await hashPassword(password);
+
+    const vendor = await Vendor.updateOne({
+      _id: id
+    }, {
+      $set: {
+        password: hash
+      }
+    });
+
+    return vendor;
+  };
 }

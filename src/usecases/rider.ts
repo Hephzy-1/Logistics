@@ -14,4 +14,11 @@ export class Rider {
     return await RiderRepository.getRiderById(id);
   }
 
+  static async riderByToken (token: string) {
+    return await RiderRepository.getRiderByToken(token);
+  }
+
+  static async updatePassword (id: string, password: string) {
+    return await RiderRepository.updateRiderPassword(id, password);
+  }
 }

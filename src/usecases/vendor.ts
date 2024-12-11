@@ -14,4 +14,11 @@ export class Vendor {
     return await VendorRepository.getVendorById(id);
   }
 
+  static async vendorByToken (token: string) {
+    return await VendorRepository.getVendorByToken(token);
+  }
+
+  static async updatePassword (id: string, password: string) {
+    return await VendorRepository.updateVendorPassword(id, password);
+  }
 }

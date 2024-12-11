@@ -8,8 +8,10 @@ export interface IVendor extends Document {
   phoneNumber: string;
   isVerified: boolean;
   token: string;
-  otp: string | null;
-  otpExpires: Date | null;
+  otp?: string;
+  otpExpires?: Date;
+  resetToken?: string;
+  resetTokenExpires?: Date;
 } 
 
 const vendorSchema = new Schema<IVendor>({
@@ -25,8 +27,10 @@ const vendorSchema = new Schema<IVendor>({
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
-  otp: { type: String, default: null },
-  otpExpires: { type: Date, default: null }
+  otp: String,
+  otpExpires: Date,
+  resetToken: String,
+  resetTokenExpires: Date
 },
 {
   toJSON: {
