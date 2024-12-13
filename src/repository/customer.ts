@@ -18,6 +18,7 @@ export class CustomerRepository {
       email: values.email,
       password: hash,
       phoneNumber: values.phoneNumber,
+      address: values.address,
       token: newToken,
       otp: otpHash,
       otpExpires: expiry
@@ -55,4 +56,18 @@ export class CustomerRepository {
 
     return customer;
   };
+
+  static async updateCustomerProfile (values: ICustomer) {
+    const customer = await Customer.updateOne({
+      _id: values.id,
+    }, {
+      $set: {
+        profilePic: values.profilePic,
+        address: values.address,
+        phoneNumber: values.phoneNumber
+      }
+    });
+
+    return customer;
+  }
 }

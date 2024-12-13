@@ -21,4 +21,8 @@ export class Vendor {
   static async updatePassword (id: string, password: string) {
     return await VendorRepository.updateVendorPassword(id, password);
   }
+
+  static async updateProfile (values: IVendor) {
+    return await VendorRepository.updateVendorProfile(values);
+  }
 }

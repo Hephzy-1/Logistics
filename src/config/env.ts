@@ -10,7 +10,11 @@ const environment = {
   CLIENT_SECRET: process.env.CLIENT_SECRET,
   SESSION_SECRET: process.env.SESSION_SECRET,
   EMAIL: process.env.EMAIL,
-  EMAIL_PASS: process.env.EMAIL_PASS
+  EMAIL_PASS: process.env.EMAIL_PASS,
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  CLOUDINARY_API_ENV: process.env.CLOUDINARY_API_ENV
 }
 
 export default environment;

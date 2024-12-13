@@ -26,4 +26,8 @@ export class Customer {
     return await CustomerRepository.updateCustomerPassword(id, password);
   }
 
+  static async updateProfile (values: ICustomer) {
+    return await CustomerRepository.updateCustomerProfile(values);
+  }
+
 }

@@ -18,6 +18,9 @@ export class RiderRepository {
       email: values.email,
       password: hash,
       phoneNumber: values.phoneNumber,
+      address: values.address,
+      vehicleNumber: values.vehicleNumber,
+      vehicleType: values.vehicleType,
       token: newToken,
       otp: otpHash, 
       otpExpires: expiry
@@ -51,4 +54,20 @@ export class RiderRepository {
 
     return rider;
   };
+
+  static async updateRiderProfile (values: IRider) {
+    const rider = await Rider.updateOne({
+      _id: values.id,
+    }, {
+      $set: {
+        profilePic: values.profilePic,
+        address: values.address,
+        phoneNumber: values.phoneNumber,
+        vehicleNumber: values.vehicleNumber,
+        vehicleType: values.vehicleType
+      }
+    });
+
+    return rider;
+  }
 }

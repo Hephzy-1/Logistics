@@ -10,9 +10,10 @@ export interface ICustomer extends Document {
   token: string;
   otp?: string;
   otpExpires?: Date;
-  profilePic?: string;
   resetToken?: string;
   resetTokenExpires?: Date;
+  profilePic?: string;
+  address: string;
 } 
 
 const customerSchema = new Schema<ICustomer>({
@@ -31,7 +32,9 @@ const customerSchema = new Schema<ICustomer>({
   otp: String,
   otpExpires: Date ,
   resetToken: String,
-  resetTokenExpires: Date
+  resetTokenExpires: Date,
+  profilePic: String,
+  address: { type: String, required: true }
 },
 {
   toJSON: {

@@ -53,4 +53,20 @@ export class VendorRepository {
 
     return vendor;
   };
+
+  static async updateVendorProfile (values: IVendor) {
+    const vendor = await Vendor.updateOne({
+      _id: values.id,
+    }, {
+      $set: {
+        profilePic: values.profilePic,
+        address: values.address,
+        phoneNumber: values.phoneNumber,
+        businessName: values.businessName,
+        businessType: values.businessType
+      }
+    });
+
+    return vendor;
+  }
 }

@@ -1,23 +1,24 @@
 import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Vendor } from "../usecases/vendor";
-import { loginUser, registerUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
 import { comparePassword } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
 import { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
+import { registerVendor } from '../validators/vendor';
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { error, value } = registerUser.validate(req.body);
+  const { error, value } = registerVendor.validate(req.body);
 
   if (error) {
     console.error(error.message);
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { name, email, password, phoneNumber, role } = value;
+  const { name, email, password, phoneNumber, address, businessName, businessType } = value;
 
   // Check all collections for existing email
   const vendorExists = await Vendor.vendorByEmail(email);
@@ -27,14 +28,14 @@ export const register = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse('Vendor already exists', 401));
   }
 
-  const newvendor = await Vendor.create(value);
+  const newVendor = await Vendor.create(value);
 
-  const sent = sendOTP(newvendor.otp, email);
+  const sent = sendOTP(newVendor.otp, email);
 
   return res.status(201).json({
     success: true,
     message: "Vendor registered. Please verify OTP to complete registration.",
-    data: newvendor,
+    data: newVendor,
     sent
   });
 });

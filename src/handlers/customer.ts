@@ -4,20 +4,22 @@ import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
-import { loginUser, registerUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators/auth";
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators/auth";
 import passport from '../config/google';
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
+import cloudinary from "../utils/cloudinary";
+import { profile, registerCustomer } from "../validators/customer";
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { error, value } = registerUser.validate(req.body);
+  const { error, value } = registerCustomer.validate(req.body);
 
   if (error) {
     console.error(error.message);
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { name, email, password, phoneNumber } = value;
+  const { name, email, password, phoneNumber, address } = value;
 
   // Check all collections for existing email
   const customerExists = await Customer.customerByEmail(email);
@@ -301,4 +303,53 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
     message: 'Password has been updated',
     data: update
   })
+});
+
+export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: 'image' },
+      (error, result) => {
+        if (error) {
+          reject(new ErrorResponse('Image upload failed', 500));
+        } else {
+          resolve(result?.secure_url || '');
+        }
+      }
+    );
+    uploadStream.end(file.buffer);
+  });
+};
+
+export const updateProfile = asyncHandler(async (req, res, next) => {
+  
+  const { error, value } = profile.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  req.body.userId = req.customer?._id;
+
+  if (!req.body.userId) {
+    next (new ErrorResponse('User ID is required', 400));
+  }
+ 
+  // Check if user exists
+  const user = await Customer.customerById(req.body.userId);
+  if (!user) {
+    next (new ErrorResponse('User not found', 404));
+  }
+
+  if (req.file) {
+    req.body.profilePic = await uploadProfilePic(req.file);
+  }
+
+  const userProfile = await Customer.updateProfile(req.body);
+
+  return res.status(204).json({ 
+    success: true, 
+    message: 'Profile updated successfully', 
+    data: userProfile 
+  });
 });

@@ -2,22 +2,24 @@ import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Rider } from "../usecases/rider";
 import { comparePassword } from '../utils/hash';
-import { loginUser, registerUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto';
 import passport from '../config/google';
 import { NextFunction, Request, Response } from 'express';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
+import { uploadProfilePic } from './customer';
+import { profile, registerRider } from '../validators/rider';
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { error, value } = registerUser.validate(req.body);
+  const { error, value } = registerRider.validate(req.body);
 
   if (error) {
     console.error(error.message);
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { name, email, password, phoneNumber, role } = value;
+  const { name, email, password, phoneNumber, address, vehicleNumber, vehicleType } = value;
 
   // Check all collections for existing email
   const riderExists = await Rider.riderByEmail(email);
@@ -304,3 +306,34 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
     data: update
   })
 });
+
+export const updateProfile = asyncHandler(async (req, res, next) => {
+  
+  const { error, value } = profile.validate(req.body);
+
+  if (error) throw next(new ErrorResponse(error.details[0].message, 400));
+
+  req.body.userId = req.rider?._id;
+
+  if (!req.body.userId) {
+    next (new ErrorResponse('User ID is required', 400));
+  }
+ 
+  // Check if user exists
+  const user = await Rider.riderById(req.body.userId);
+  if (!user) {
+    next (new ErrorResponse('User not found', 404));
+  }
+
+  if (req.file) {
+    req.body.profilePic = await uploadProfilePic(req.file);
+  }
+
+  const userProfile = await Rider.updateProfile(req.body);
+
+  return res.status(204).json({ 
+    success: true, 
+    message: 'Profile updated successfully', 
+    data: userProfile 
+  });
+})

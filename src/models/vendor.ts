@@ -7,6 +7,10 @@ export interface IVendor extends Document {
   googleId?: string;
   phoneNumber: string;
   isVerified: boolean;
+  address: string;
+  businessName: string;
+  businessType: string;
+  profilePic: string;
   token: string;
   otp?: string;
   otpExpires?: Date;
@@ -25,6 +29,9 @@ const vendorSchema = new Schema<IVendor>({
   },
   googleId: { type: String, unique: true, sparse: true },
   phoneNumber: { type: String, unique: true, required: true },
+  address: { type: String, required: true },
+  businessType: { type: String, required: true },
+  businessName: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
   otp: String,

@@ -21,4 +21,8 @@ export class Rider {
   static async updatePassword (id: string, password: string) {
     return await RiderRepository.updateRiderPassword(id, password);
   }
+
+  static async updateProfile (values: IRider) {
+    return await RiderRepository.updateRiderProfile(values);
+  }
 }

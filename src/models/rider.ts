@@ -7,6 +7,10 @@ export interface IRider extends Document {
   googleId?: string;
   phoneNumber: string;
   isVerified: boolean;
+  address: string;
+  vehicleNumber: string;
+  vehicleType: string;
+  profilePic: string;
   token: string;
   otp?: string;
   otpExpires?: Date;
@@ -27,6 +31,10 @@ const riderSchema = new Schema<IRider>({
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
+  address: { type: String, required: true },
+  vehicleNumber: { type: String, unique: true, required: true },
+  vehicleType: { type: String, required: true },
+  profilePic: { type: String, default: '' },
   otp: String,
   otpExpires: Date,
   resetToken: String,
