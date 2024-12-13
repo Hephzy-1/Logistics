@@ -41,6 +41,10 @@ export class RiderRepository {
     return await Rider.findOne({ token })
   };
 
+  static async getRiderByResetToken (token: string) {
+    return await Rider.findOne({ resetToken: token })
+  };
+
   static async updateRiderPassword (id: string, password: string) {
     const hash = await hashPassword(password);
 

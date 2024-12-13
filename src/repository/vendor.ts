@@ -40,6 +40,10 @@ export class VendorRepository {
     return await Vendor.findById({ token })
   };
 
+  static async getVendorByResetToken (token: string) {
+    return await Vendor.findById({ ResetToken: token });
+  };
+
   static async updateVendorPassword (id: string, password: string) {
     const hash = await hashPassword(password);
 

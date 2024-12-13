@@ -18,6 +18,10 @@ export class Rider {
     return await RiderRepository.getRiderByToken(token);
   }
 
+  static async riderByResetToken (token: string) {
+    return await RiderRepository.getRiderByResetToken(token);
+  }
+
   static async updatePassword (id: string, password: string) {
     return await RiderRepository.updateRiderPassword(id, password);
   }

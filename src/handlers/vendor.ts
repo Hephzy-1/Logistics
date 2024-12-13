@@ -214,12 +214,13 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   const resetToken = await generateToken(email);
   const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
 
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-  exists.resetToken = resetToken;
+  exists.resetToken = hashedToken;
   exists.resetTokenExpires = expiry;
   await exists.save();
 
-  const sendMail = await sendResetLink(resetToken, email, exists.id, 'Vendor');
+  const sendMail = await sendResetLink(resetToken, email, 'Vendor');
 
   return res.status(200).json({
     success: true,
@@ -230,22 +231,27 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const { id, token } = req.params;
+  const token = req.params.resetToken;
 
   if (!token) {
     console.error('Token is required');
     throw next(new ErrorResponse("Reset Token is required", 401));
   }
 
-  const user = await Vendor.vendorById(id);
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await Vendor.vendorByResetToken(hashedToken);
 
   if (!user) {
     throw next(new ErrorResponse('No user found', 404));
   }
 
-  if (user.resetToken !== token) {
-    
+  // Check if token has expired
+  if (!user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
+    console.error("Reset token has expired");
+    throw next(new ErrorResponse("Reset token has expired", 400));
   }
+
   const { error, value } = resetPass.validate(req.body);
 
   if (error) {
@@ -259,7 +265,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse("Passwords don't match", 400));
   }
 
-  const update = await Vendor.updatePassword(id, newPassword);
+  const update = await Vendor.updatePassword(user.id, newPassword);
 
   return res.status(203).json({
     success: true,

@@ -31,7 +31,7 @@ export const sendOTP = async (otp:string, email:string) => {
   });
 };
 
-export const sendResetLink = async (token: string, email: string, id: string, role:string) => {
+export const sendResetLink = async (token: string, email: string, role:string) => {
   const mailOptions = {
     from: 'Hephzy',
     to: email,
@@ -40,7 +40,7 @@ export const sendResetLink = async (token: string, email: string, id: string, ro
       <h2>
         Your reset token link is: 
       
-        <b>http://localhost:${environment.PORT}/api/v1/${role}/reset/${id}/${token}</b>
+        <b>http://localhost:${environment.PORT}/api/v1/${role}/reset/${token}</b>
       </h2>
     ` 
   };

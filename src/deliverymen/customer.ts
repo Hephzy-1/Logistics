@@ -14,7 +14,7 @@ route.route('/otp/:id')
   .put(resendOTP)
   .post(verifyOTP)
 route.post('/forget-password', forgetPassword);
-route.put('/reset/:id/:token', resetPassword);
+route.put('/reset/:token', resetPassword);
 
 route.use(protectCustomer);
 

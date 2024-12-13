@@ -18,6 +18,10 @@ export class Vendor {
     return await VendorRepository.getVendorByToken(token);
   }
 
+  static async vendorByResetToken (token: string) {
+    return await VendorRepository.getVendorByResetToken(token);
+  }
+
   static async updatePassword (id: string, password: string) {
     return await VendorRepository.updateVendorPassword(id, password);
   }
