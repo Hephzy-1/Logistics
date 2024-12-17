@@ -4,7 +4,7 @@ import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
-import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators/auth";
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators";
 import passport from '../config/google';
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";

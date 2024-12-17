@@ -2,7 +2,7 @@ import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Rider } from "../usecases/rider";
 import { comparePassword } from '../utils/hash';
-import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators/auth';
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto';
 import passport from '../config/google';

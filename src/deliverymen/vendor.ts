@@ -1,8 +1,9 @@
 import express from 'express';
 import { login, oAuth, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword } from '../handlers/vendor';
 import passport from '../config/google';
-import { isOwner, protectVendor } from '../middlewares';
+import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
+import { newMenu } from '../handlers/menu';
 
 const route = express.Router();
 
@@ -17,9 +18,10 @@ route.route('/otp/:id')
 route.post('/forget-password', forgetPassword);
 route.put('/reset/:resetToken', resetPassword);
 
-route.use(protectVendor);
+route.use(protect);
 
 route.put('/update-password/:id', updatePassword);
-route.put('/update-profile', isOwner, upload.single('profilePic'))
+route.put('/update-profile', isOwner, upload.single('profilePic'));
+route.post('/create-menu', upload.array('menuItem.picture'), newMenu);
 
 export default route;

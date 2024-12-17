@@ -1,7 +1,7 @@
 import express from 'express';
 import { login, oAuth, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword } from '../handlers/customer';
 import passport from '../config/google';
-import { isOwner, protectCustomer } from '../middlewares';
+import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
 
 const route = express.Router();
@@ -16,7 +16,7 @@ route.route('/otp/:id')
 route.post('/forget-password', forgetPassword);
 route.put('/reset/:token', resetPassword);
 
-route.use(protectCustomer);
+route.use(protect)
 
 route.put('/update-password/:id', updatePassword);
 route.put('/update-profile', isOwner, upload.single('profilePic'))

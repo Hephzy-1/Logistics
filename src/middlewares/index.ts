@@ -23,11 +23,8 @@ const AUTH_CONSTANTS = {
   COOKIE_NAME: 'token',
   ERROR_MESSAGES: {
     TOKEN_MISSING: 'Authentication token is required',
-    CUSTOMER_NOT_FOUND: 'Customer not found or session expired',
-    RIDER_NOT_FOUND: 'Rider not found or session expired',
-    VENDOR_NOT_FOUND: 'Vendor not found or session expired',
+    USER_NOT_FOUND: 'User not found or session expired',
     UNAUTHORIZED: 'Unauthorized access',
-    ADMIN_ONLY: 'Access denied. Administrator privileges required',
     INVALID_TOKEN: 'Invalid authentication token'
   }
 } as const;
@@ -50,59 +47,24 @@ const extractToken = (req: Request): string | null => {
  */
 
 // Authenticate Customer
-export const protectCustomer = asyncHandler(async (req, res, next): Promise<void> => {
+export const protect = asyncHandler(async (req, res, next): Promise<void> => {
   const token = extractToken(req);
 
   if (!token) {
     throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
   }
 
-  const customer = await Customer.customerByToken(token);
+  const user =
+    (await Customer.customerByToken(token)) ||
+    (await Vendor.vendorByToken(token)) ||
+    (await Rider.riderByToken(token));
 
-  if (!customer) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.CUSTOMER_NOT_FOUND, 401);
+  if (!user) {
+    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
   }
 
   // Attach Customer to request
-  req.customer = customer;
-  next();
-});
-
-// Authenticate Vendor
-export const protectVendor = asyncHandler(async (req, res, next): Promise<void> => {
-  const token = extractToken(req);
-
-  if (!token) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
-  }
-
-  const vendor = await Vendor.vendorByToken(token);
-
-  if (!vendor) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.VENDOR_NOT_FOUND, 401);
-  }
-
-  // Attach Vendor to request
-  req.vendor = vendor;
-  next();
-});
-
-// Authenticate Rider
-export const protectRider = asyncHandler(async (req, res, next): Promise<void> => {
-  const token = extractToken(req);
-
-  if (!token) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
-  }
-
-  const rider = await Rider.riderByToken(token);
-
-  if (!rider) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.RIDER_NOT_FOUND, 401);
-  }
-
-  // Attach Rider to request
-  req.rider = rider;
+  req.user = user;
   next();
 });
 

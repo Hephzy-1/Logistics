@@ -48,7 +48,7 @@ passport.use(
           googleId: profile.id,
           email,
           name: profile.displayName || 'Anonymous',
-          // isVerified: profile.ver || false,
+          isVerified: profile.emails?.[0]?.verified,
         });
 
         await newUser.save();
