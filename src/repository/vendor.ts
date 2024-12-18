@@ -73,4 +73,16 @@ export class VendorRepository {
 
     return vendor;
   }
+
+  static async getVerifiedVendors () {
+    const verifiedVendors = await Vendor.find({ isVerified: true });
+
+    return verifiedVendors;
+  }
+
+  static async getVerifiedVendorsWithMenus () {
+    const verifiedVendorsMenu = await Vendor.find({ isVerified: true }).populate('menus');
+
+    return verifiedVendorsMenu;
+  }
 }

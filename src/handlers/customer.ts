@@ -5,7 +5,7 @@ import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators";
-import passport from '../config/google';
+import passport from 'passport';
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
 import cloudinary from "../utils/cloudinary";
@@ -358,3 +358,11 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     data: userProfile 
   });
 });
+
+export const getVerifiedVendorsMenu = asyncHandler( async (req, res, next) => {
+  const verifiedVendors = await Vendor.verifiedVendors();
+
+  if (!verifiedVendors) throw next(new ErrorResponse('No Vendors found', 404));
+
+  
+})

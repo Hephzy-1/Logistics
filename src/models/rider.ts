@@ -27,7 +27,7 @@ const riderSchema = new Schema<IRider>({
       return !this.googleId;
     }
   },
-  googleId: { type: String, unique: true },
+  googleId: { type: String, unique: true, sparse: true },
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },

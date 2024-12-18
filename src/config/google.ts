@@ -5,6 +5,19 @@ import Customer from '../models/customer';
 import Vendor from '../models/vendor';
 import Rider from '../models/rider';
 import environment from './env';
+import { ErrorResponse } from '../utils/errorResponse';
+
+const getModel = (path: string) => {
+  if (path.includes('/customer')) {
+    return Customer;
+  } else if (path.includes('/vendor')) {
+    return Vendor;
+  } else if (path.includes('/rider')) {
+    return Rider;
+  } else {
+    throw new ErrorResponse('Invalid path', 400);
+  }
+};
 
 passport.use(
   new GoogleStrategy(
@@ -29,18 +42,7 @@ passport.use(
         }
 
         // Determine model based on the URL path
-        const path = req.baseUrl; // Get the base URL
-        let Model;
-
-        if (path.includes('/customer')) {
-          Model = Customer;
-        } else if (path.includes('/vendor')) {
-          Model = Vendor;
-        } else if (path.includes('/rider')) {
-          Model = Rider;
-        } else {
-          return done(null, false, { message: 'Invalid user role in URL path' });
-        }
+        const Model = getModel(req.baseUrl);
 
         // Create a new user if none exists
         const email = profile.emails?.[0]?.value;
@@ -48,7 +50,7 @@ passport.use(
           googleId: profile.id,
           email,
           name: profile.displayName || 'Anonymous',
-          isVerified: profile.emails?.[0]?.verified,
+          isVerified: profile.emails?.[0]?.verified || false,
         });
 
         await newUser.save();

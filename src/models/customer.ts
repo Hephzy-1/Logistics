@@ -24,8 +24,8 @@ const customerSchema = new Schema<ICustomer>({
     required: function() {
       return !this.googleId;
     }
-   },
-  googleId: { type: Number, unique: true },
+  },
+  googleId: { type: Number, unique: true, sparse: true },
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },

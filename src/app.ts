@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import asyncHandler from "./middlewares/async";
 import errorHandler from "./middlewares/error";
+import AppResponseHandler, { AppResponse } from "./middlewares/appResponse";
 import cors from 'cors';
 import passport from "passport";
 import session from "express-session";
@@ -22,9 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: environment.SESSION_SECRET, resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(AppResponseHandler)
 
 app.get('/', asyncHandler(async (req: Request, res: Response) => {
-  return res.status(200).json({ message: "Welcome" });
+  return new AppResponse(200, 'Welcome', null);
 }));
 
 app.use('/api/v1/customer', customerRoute);

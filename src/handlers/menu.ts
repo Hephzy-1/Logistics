@@ -19,6 +19,10 @@ export const newMenu = asyncHandler(async (req, res, next) => {
   const itemPicture = await uploadProfilePic(req.body.file); 
 
   req.body.menuItem.picture = itemPicture;
+  req.body.menuItem.itemName = itemName;
+  req.body.menuItem.price = price;
+  req.body.menuItem.category = category;
+  req.body.menuItem.availability = availability;
 
   // Step 5: Create Menu
   const menu = await Menu.create(req.body);

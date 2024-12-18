@@ -29,4 +29,8 @@ export class Vendor {
   static async updateProfile (values: IVendor) {
     return await VendorRepository.updateVendorProfile(values);
   }
+
+  static async verifiedVendors () {
+    return await VendorRepository.getVerifiedVendors();
+  }
 }
