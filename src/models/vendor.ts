@@ -4,12 +4,12 @@ export interface IVendor extends Document {
   name: string;
   email: string;
   password?: string;
-  googleId?: string;
-  phoneNumber: string;
+  googleId?: number;
+  phoneNumber?: string;
   isVerified: boolean;
-  address: string;
-  businessName: string;
-  businessType: string;
+  address?: string;
+  businessName?: string;
+  businessType?: string;
   profilePic: string;
   token: string;
   otp?: string;
@@ -27,11 +27,19 @@ const vendorSchema = new Schema<IVendor>({
       return !this.googleId;
     }
   },
-  googleId: { type: String, unique: true, sparse: true },
-  phoneNumber: { type: String, unique: true, required: true },
-  address: { type: String, required: true },
-  businessType: { type: String, required: true },
-  businessName: { type: String, unique: true, required: true },
+  googleId: { type: Number, unique: true, sparse: true },
+  phoneNumber: { type: String, unique: true, required: function() {
+    return !this.googleId;
+  } },
+  address: { type: String, required: function() {
+    return !this.googleId;
+  } },
+  businessType: { type: String, required: function() {
+    return !this.googleId;
+  } },
+  businessName: { type: String, unique: true, required: function() {
+    return !this.googleId;
+  } },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
   otp: String,

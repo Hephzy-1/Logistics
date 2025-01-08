@@ -8,9 +8,11 @@ export class VendorRepository {
   static async createVendor(values: IVendor) {
     const hash = values.password ? await hashPassword(values.password) : undefined;
   
-    const otp = Array(6).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    const expiry = new Date(Date.now() + 10 * 60 * 1000)
+     // Generate a new OTP
+      const otp = Array(6).fill(0).map(() => Math.floor(Math.random() * 10)).join("");
+    
+      const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+      const expiry = new Date(Date.now() + 10 * 60 * 1000); // New expiration time: 10 minutes
   
     const newToken = await generateToken(values.email);
   
@@ -20,8 +22,11 @@ export class VendorRepository {
       phoneNumber: values.phoneNumber,
       password: hash,
       token: newToken,
-      otp: otpHash,
+      otp: hashedOTP,
       otpExpires: expiry,
+      address: values.address,
+      businessName: values.businessName,
+      businessType: values.businessType
     };
     const vendor = await new Vendor(vendorData).save();
     return { vendor, otp };
@@ -85,4 +90,18 @@ export class VendorRepository {
 
     return verifiedVendorsMenu;
   }
+
+  static async getVendorByName (name: string) {
+    const vendor = await Vendor.findOne({ name });
+
+    return vendor;
+  }
+
+  static async getVendorByBusinessName (businessName: string) {
+    const vendor = await Vendor.findOne({ businessName }).populate('menus').select('businessName, ');
+
+    return vendor;
+  }
+  
+  
 }

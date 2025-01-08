@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request } from 'express';
 import { ICustomer } from '../models/customer';
 import { Customer } from '../usecases/customer';
 import asyncHandler from './async';
@@ -7,6 +7,7 @@ import { Vendor } from '../usecases/vendor';
 import { IVendor } from '../models/vendor';
 import { IRider } from '../models/rider';
 import { Rider } from '../usecases/rider';
+import { verifyToken } from '../utils/jwt';
 
 // Extend Express Request type
 declare module 'express' {
@@ -25,7 +26,9 @@ const AUTH_CONSTANTS = {
     TOKEN_MISSING: 'Authentication token is required',
     USER_NOT_FOUND: 'User not found or session expired',
     UNAUTHORIZED: 'Unauthorized access',
-    INVALID_TOKEN: 'Invalid authentication token'
+    INVALID_TOKEN: 'Invalid authentication token',
+    TOKEN_EXPIRED: 'Token has expired',
+    AUTH_FAILED: 'Authentication failed'
   }
 } as const;
 
@@ -34,6 +37,8 @@ const AUTH_CONSTANTS = {
  */
 const extractToken = (req: Request): string | null => {
   const authHeader = req.headers.authorization;
+
+  if (!authHeader) throw new ErrorResponse('No token found', 401)
   
   if (authHeader?.startsWith(AUTH_CONSTANTS.BEARER_PREFIX)) {
     return authHeader.substring(AUTH_CONSTANTS.BEARER_PREFIX.length);
@@ -54,34 +59,49 @@ export const protect = asyncHandler(async (req, res, next): Promise<void> => {
     throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
   }
 
-  const user =
-    (await Customer.customerByToken(token)) ||
-    (await Vendor.vendorByToken(token)) ||
-    (await Rider.riderByToken(token));
+  try {
+    // Verify token using your utility function
+    const decoded = await verifyToken(token);
 
-  if (!user) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
+    console.log(decoded); 
+
+    if (!decoded) throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401))
+
+    // Check for user existence
+    const user =
+      (await Customer.customerByToken(token)) ||
+      (await Vendor.vendorByToken(token)) ||
+      (await Rider.riderByToken(token));
+
+    if (!user) {
+      throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
+    }
+
+    // Attach user to request object
+    req.user = user as ICustomer | IVendor | IRider;
+
+    next();
+  } catch (err) {
+    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.AUTH_FAILED, 401);
   }
-
-  // Attach Customer to request
-  req.user = user;
-  next();
 });
 
 /**
- * Resource ownership middleware
+ * Resource ownership middleware 5203774966
  */
 export const isOwner = asyncHandler(async (req, res, next): Promise<void> => {
-  const { id } = req.params;
-  const currentUserId = req.customer?._id || req.vendor?._id || req.rider?._id;
+  const { id } = req.params; 
+  const currentUserId = req.user?._id;
+
+  if (!id) throw next(new ErrorResponse('Id is required in params', 401));
 
   if (!currentUserId) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 401);
+    throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 401));
   }
 
   // Use strict equality comparison with toString()
   if (currentUserId.toString() !== id.toString()) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 403);
+    throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 403));
   }
 
   next();

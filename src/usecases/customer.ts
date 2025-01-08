@@ -14,8 +14,8 @@ export class Customer {
     return await CustomerRepository.getCustomerByToken(token);
   }
 
-  static async customerByResetToken (token: string) {
-    return await CustomerRepository.getCustomerByToken(token);
+  static async customerByResetToken (resetToken: string) {
+    return await CustomerRepository.getCustomerByToken(resetToken);
   }
 
   static async customerById (id: string) {

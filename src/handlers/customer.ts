@@ -1,15 +1,25 @@
-import { NextFunction, Request, Response } from "express";
 import asyncHandler from "../middlewares/async";
 import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
-import { comparePassword } from "../utils/hash";
+import { comparePassword, compareToken, hashToken } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators";
-import passport from 'passport';
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
 import cloudinary from "../utils/cloudinary";
 import { profile, registerCustomer } from "../validators/customer";
+import { Vendor } from "../usecases/vendor";
+import { AppResponse } from "../middlewares/appResponse";
+import { ICustomer } from "../models/customer";
+import { IVendor } from '../models/vendor';
+import { IRider } from '../models/rider';
+
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: ICustomer | IVendor | IRider; // Assuming these types include an `id` or `_id` property
+  }
+}
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerCustomer.validate(req.body);
@@ -26,19 +36,16 @@ export const register = asyncHandler(async (req, res, next) => {
 
   if (customerExists) {
     console.error('Customer Already Exists');
-    throw next(new ErrorResponse('Customer already exists', 401));
+    throw next(new ErrorResponse('Customer already exists', 409));
   }
 
   const newCustomer = await Customer.create(value);
 
   const sent = await sendOTP(newCustomer.otp, email)
 
-  return res.status(201).json({
-    success: true,
-    message: "Customer registered. Please verify OTP to complete registration.",
-    data: newCustomer,
-    email: sent
-  });
+  console.log(newCustomer.otp);
+
+  return AppResponse(res, 201, newCustomer.customer, "Customer registered. Please verify OTP to complete registration.")
 });
 
 export const login = asyncHandler(async (req, res, next) => {
@@ -66,7 +73,7 @@ export const login = asyncHandler(async (req, res, next) => {
   customer.token = token;
   await customer.save();
 
-  return res.status(200).json({ success: true, message: 'Customer has successfully logged in', data: customer });
+  return AppResponse(res, 200, customer, 'Customer has successfully logged in')
 });
 
 export const resendOTP = asyncHandler(async (req, res, next) => {
@@ -93,14 +100,10 @@ export const resendOTP = asyncHandler(async (req, res, next) => {
 
   const sent = await sendOTP(newOTP, customer.email);
 
+  console.log(newOTP);
+
   // Respond with success 
-  res.status(200).json({
-    success: true,
-    message: "New OTP has been sent",
-    otp: newOTP,
-    data: customer.otp ,
-    emailSent: sent
-  });
+  return AppResponse(res, 200, customer, "New OTP has been sent")
 });
 
 export const verifyOTP = asyncHandler(async (req, res, next) => {
@@ -146,55 +149,8 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
   customer.otpExpires = undefined; // Clear OTP expiry
   await customer.save();
 
-  res.status(200).json({
-    success: true,
-    message: "OTP verified successfully",
-  });
+  return AppResponse(res, 200, customer, "OTP verified successfully")
 });
-
-export async function oAuth(req: Request, res: Response, next: NextFunction) {
-  passport.authenticate(
-    'google',
-    { scope: ['profile', 'email'], session: false },
-    async (err: any, user: any, info: any) => {
-      if (err) {
-        console.error('Error during authentication:', err);
-        return next(new ErrorResponse('Authentication failed', 500));
-      }
-
-      if (!user) {
-        console.log('No user found:', info?.message);
-        return next(new ErrorResponse(info?.message || 'Authentication failed', 404));
-      }
-
-      try {
-        // Ensure required fields exist
-        const { email, name, isVerified } = user;
-        if (!email || !name) {
-          return next(new ErrorResponse('Missing essential user fields', 400));
-        }
-
-        // Generate and save token if needed
-        const token = generateToken(email);
-        user.token = token;
-        await user.save();
-
-        // Respond with user data
-        res.status(200).json({
-          success: true,
-          message: 'Authentication successful',
-          data: {
-            user,
-            token,
-          },
-        });
-      } catch (error: any) {
-        console.error('Error during user response handling:', error);
-        return next(new ErrorResponse(error.message, 500));
-      }
-    }
-  )(req, res, next);
-}
 
 export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { error, value } = resetLink.validate(req.body); 
@@ -207,6 +163,7 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { email } = value;
 
   const exists = await Customer.customerByEmail(email);
+  console.log(exists);
   
   if (!exists) {
     throw next( new ErrorResponse("This customer doesn't exists", 404));
@@ -215,7 +172,8 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   const resetToken = await generateToken(email);
   const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
 
-  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  const hashedToken = await hashToken(resetToken);
+  console.log(hashedToken)
 
   exists.resetToken = hashedToken;
   exists.resetTokenExpires = expiry;
@@ -223,35 +181,17 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
 
   const sendMail = await sendResetLink(resetToken, email, 'customer');
 
-  return res.status(200).json({
-    success: true,
-    message: 'Reset link has been sent',
-    token: resetToken,
-    sentMail: sendMail
-  });
+  return AppResponse(res, 200, resetToken, 'Reset link has been sent');
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const token = req.params.resetToken;
+  const token = req.params.token;
 
   if (!token) {
     console.error('Token is required');
     throw next(new ErrorResponse("Reset Token is required", 401));
   }
 
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-  const user = await Customer.customerByResetToken(hashedToken);
-
-  if (!user) {
-    throw next(new ErrorResponse('No user found', 404));
-  }
-
-  // Check if token has expired
-  if (!user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
-    console.error("Reset token has expired");
-    throw next(new ErrorResponse("Reset token has expired", 400));
-  }
   const { error, value } = resetPass.validate(req.body);
 
   if (error) {
@@ -259,23 +199,36 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { newPassword, confirmPassword } = value;
+  const { id, newPassword, confirmPassword } = value;
 
   if (confirmPassword !== newPassword) {
     throw next(new ErrorResponse("Passwords don't match", 400));
   }
 
+  const user = await Customer.customerById(id);
+
+  console.log(user)
+
+  if (!user || !user.resetToken) {
+    throw next(new ErrorResponse('No user found', 404));
+  }
+
+  // Check if token has expired
+  if (!user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
+    console.error("Reset token has expired");
+    throw next(new ErrorResponse("Reset token has expired", 402));
+  }
+
+  const hashedToken = await compareToken(token, user.resetToken)
+  console.log(hashedToken);
+
   const update = await Customer.updatePassword(user.id, newPassword);
 
-  return res.status(203).json({
-    success: true,
-    message: 'Password has been updated',
-    data: update
-  })
+  return AppResponse(res, 200, null, 'Password has been updated')
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
-  const id = req.customer?.id;
+  const id = req.user?.id;
 
   const { error, value } = updatePass.validate(req.body);
 
@@ -286,6 +239,7 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
   const { oldPassword, newPassword, confirmPassword } = value;
 
   const user = await Customer.customerById(id);
+  console.log(user);
 
   if (!user || !user.password) {
     throw next(new ErrorResponse('User password not found', 404));
@@ -303,11 +257,7 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 
   const update = await Customer.updatePassword(id, newPassword);
   
-  return res.status(203).json({
-    success: true,
-    message: 'Password has been updated',
-    data: update
-  })
+  return AppResponse(res, 200, null, 'Password has been updated');
 });
 
 export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => {
@@ -327,23 +277,16 @@ export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => 
 };
 
 export const updateProfile = asyncHandler(async (req, res, next) => {
-  
-  const { error, value } = profile.validate(req.body);
-
-  if (error) {
-    throw next(new ErrorResponse(error.details[0].message, 400));
-  }
-
-  req.body.userId = req.customer?._id;
+  req.body.userId = req.user?._id;
 
   if (!req.body.userId) {
-    next (new ErrorResponse('User ID is required', 400));
+    return next(new ErrorResponse('User ID is required', 400));
   }
- 
+
   // Check if user exists
   const user = await Customer.customerById(req.body.userId);
   if (!user) {
-    next (new ErrorResponse('User not found', 404));
+    return next(new ErrorResponse('User not found', 404));
   }
 
   if (req.file) {
@@ -352,17 +295,53 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
   const userProfile = await Customer.updateProfile(req.body);
 
-  return res.status(204).json({ 
-    success: true, 
-    message: 'Profile updated successfully', 
-    data: userProfile 
-  });
+  return AppResponse(res, 203, userProfile, 'Profile updated successfully');
 });
 
-export const getVerifiedVendorsMenu = asyncHandler( async (req, res, next) => {
-  const verifiedVendors = await Vendor.verifiedVendors();
+
+export const getAllVerifiedVendorsMenu = asyncHandler( async (req, res, next) => {
+  const verifiedVendors = await Vendor.verifiedVendorsMenu();
 
   if (!verifiedVendors) throw next(new ErrorResponse('No Vendors found', 404));
 
+  return AppResponse(res, 200, verifiedVendors, 'Here is the all the verified vendors menu');
+});
+
+export const getAllVerifiedVendors = asyncHandler(async (req, res, next) => {
+  const verifiedVendors = await Vendor.verifiedVendors();
+
+  if (!verifiedVendors) throw next(new ErrorResponse('No vendors found', 400));
+
+  return AppResponse(res, 200, verifiedVendors, 'Here is the all the verified vendors');
+});
+
+export const getSpecificVendorById = asyncHandler(async (req, res, next) => {
+  const vendorId = req.params.vendorId;
+
+  const vendor = await Vendor.vendorById(vendorId);
+
+  if (!vendor) {
+    throw next(new ErrorResponse('Vendor not found', 404));
+  }
   
+  return res.status(200).json({
+    success: true,
+    message: 'Here is the specific vendor',
+    data: vendor
+  });
+});
+
+export const getVendorByBusinessName = asyncHandler(async (req, res, next) => {
+  const business = req.params.businessName;
+  
+  const verifiedBusiness = await Vendor.vendorByBusinessName(business);
+
+  if (!verifiedBusiness || !verifiedBusiness.isVerified) throw next(new ErrorResponse('No Business found', 400));
+
+  
+
+  return res.status(200).json({
+    success: true,
+    message: 'Here is the business info'
+  })
 })

@@ -8,7 +8,9 @@ import crypto from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
-import { registerVendor } from '../validators/vendor';
+import { profile, registerVendor } from '../validators/vendor';
+import { uploadProfilePic } from './customer';
+import { AppResponse } from '../middlewares/appResponse';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerVendor.validate(req.body);
@@ -18,7 +20,7 @@ export const register = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { name, email, password, phoneNumber, address, businessName, businessType } = value;
+  const { email, ...data } = value;
 
   // Check all collections for existing email
   const vendorExists = await Vendor.vendorByEmail(email);
@@ -32,12 +34,9 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const sent = sendOTP(newVendor.otp, email);
 
-  return res.status(201).json({
-    success: true,
-    message: "Vendor registered. Please verify OTP to complete registration.",
-    data: newVendor,
-    sent
-  });
+  console.log(newVendor.otp);
+
+  return AppResponse(res, 201, newVendor, "Vendor registered. Please verify OTP to complete registration.");
 });
 
 export const login = asyncHandler(async (req, res, next) => {
@@ -93,13 +92,9 @@ export const resendOTP = asyncHandler(async (req, res, next) => {
   const sent = sendOTP(newOTP, vendor.email);
 
   // Respond with success 
-  res.status(200).json({
-    success: true,
-    message: "New OTP has been sent",
-    otp: newOTP,
-    data: vendor.otp,
-    sent 
-  });
+  console.log(newOTP);
+  
+  return AppResponse(res, 200, vendor, "New OTP has been sent");
 });
 
 export const verifyOTP = asyncHandler(async (req, res, next) => {
@@ -145,55 +140,8 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
   vendor.otpExpires = undefined; // Clear OTP expiry
   await vendor.save();
 
-  res.status(200).json({
-    success: true,
-    message: "OTP verified successfully",
-  });
+  return AppResponse(res, 200, vendor, "OTP verified successfully");
 });
-
-export function oAuth(req: Request, res: Response, next: NextFunction) {
-  passport.authenticate(
-    'google',
-    { scope: ['profile', 'email'], session: false },
-    async (err: any, user: any, info: any) => {
-      if (err) {
-        console.error('Error during authentication:', err);
-        return next(new ErrorResponse('Authentication failed', 500));
-      }
-
-      if (!user) {
-        console.log('No user found:', info?.message);
-        return next(new ErrorResponse(info?.message || 'Authentication failed', 404));
-      }
-
-      try {
-        // Ensure required fields exist
-        const { email, name, isVerified } = user;
-        if (!email || !name) {
-          return next(new ErrorResponse('Missing essential user fields', 400));
-        }
-
-        // Generate and save token if needed
-        const token = generateToken(email);
-        user.token = token;
-        await user.save();
-
-        // Respond with user data
-        res.status(200).json({
-          success: true,
-          message: 'Authentication successful',
-          data: {
-            user,
-            token,
-          },
-        });
-      } catch (error: any) {
-        console.error('Error during user response handling:', error);
-        return next(new ErrorResponse(error.message, 500));
-      }
-    }
-  )(req, res, next);
-}
 
 export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { error, value } = resetLink.validate(req.body); 
@@ -309,3 +257,37 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
     data: update
   })
 });
+
+export const updateProfile = asyncHandler(async (req, res, next) => {
+  
+  const { error, value } = profile.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  req.body.userId = req.vendor?._id;
+
+  if (!req.body.userId) {
+    next (new ErrorResponse('User ID is required', 400));
+  }
+ 
+  // Check if user exists
+  const user = await Vendor.vendorById(req.body.userId);
+  if (!user) {
+    next (new ErrorResponse('User not found', 404));
+  }
+
+  if (req.file) {
+    req.body.profilePic = await uploadProfilePic(req.file);
+  }
+
+  const userProfile = await Vendor.updateProfile(req.body);
+
+  return res.status(204).json({ 
+    success: true, 
+    message: 'Profile updated successfully', 
+    data: userProfile 
+  });
+});
+

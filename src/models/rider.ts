@@ -4,7 +4,7 @@ export interface IRider extends Document {
   name: string;
   email: string;
   password?: string;
-  googleId?: string;
+  googleId?: number;
   phoneNumber: string;
   isVerified: boolean;
   address: string;
@@ -27,7 +27,7 @@ const riderSchema = new Schema<IRider>({
       return !this.googleId;
     }
   },
-  googleId: { type: String, unique: true, sparse: true },
+  googleId: { type: Number, unique: true, sparse: true },
   phoneNumber: { type: String, unique: true, required: true },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },

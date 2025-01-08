@@ -10,6 +10,7 @@ import { NextFunction, Request, Response } from 'express';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
 import { uploadProfilePic } from './customer';
 import { profile, registerRider } from '../validators/rider';
+import { AppResponse } from '../middlewares/appResponse';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerRider.validate(req.body);
@@ -177,19 +178,15 @@ export function oAuth(req: Request, res: Response, next: NextFunction) {
         }
 
         // Generate and save token if needed
-        const token = generateToken(email);
+        const token = await generateToken(email);
         user.token = token;
         await user.save();
 
         // Respond with user data
-        res.status(200).json({
-          success: true,
-          message: 'Authentication successful',
-          data: {
+        return AppResponse(res, 200, {
             user,
             token,
-          },
-        });
+          }, 'Authentication successful');
       } catch (error: any) {
         console.error('Error during user response handling:', error);
         return next(new ErrorResponse(error.message, 500));
@@ -278,7 +275,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
-  const { id } = req.params;
+  const id = req.user?.id;
 
   const { error, value } = updatePass.validate(req.body);
 

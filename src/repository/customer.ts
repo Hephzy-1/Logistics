@@ -35,8 +35,10 @@ export class CustomerRepository {
     return await Customer.findOne({ token });
   }
 
-  static async getCustomerByResetToken (token: string) {
-    return await Customer.findOne({ resetToken: token });
+  static async getCustomerByResetToken (resetToken: string) {
+    const user = await Customer.findOne({ resetToken });
+    console.log(user);
+    return user;
   }
 
   static async getCustomerById (id: string) {
@@ -57,17 +59,21 @@ export class CustomerRepository {
     return customer;
   };
 
-  static async updateCustomerProfile (values: ICustomer) {
-    const customer = await Customer.updateOne({
-      _id: values.id,
-    }, {
-      $set: {
-        profilePic: values.profilePic,
-        address: values.address,
-        phoneNumber: values.phoneNumber
+  static async updateCustomerProfile(values: Partial<ICustomer>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof ICustomer] !== undefined) {
+        updates[key] = values[key as keyof ICustomer];
       }
-    });
-
+    }
+  
+    const customer = await Customer.updateOne(
+      { _id: values.id },
+      { $set: updates }
+    );
+  
     return customer;
-  }
+  }  
+    
 }

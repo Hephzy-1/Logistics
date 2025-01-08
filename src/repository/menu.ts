@@ -1,57 +1,92 @@
-import Menu, { IMenu } from "../models/menu";
+import { Menu, IMenu, MenuItem, IMenuItem } from "../models/menu";
+import { Vendor } from "../models/vendor"; // Assuming Vendor model exists
+import { ErrorResponse } from "../utils/errorResponse";
 
 export class MenuRepository {
-  static async createMenu (values: IMenu) {
+  static async createMenuItem(values: IMenuItem) {
+    const menuItem = await MenuItem.create({
+      itemName: values.itemName,
+      price: values.price,
+      category: values.category,
+      availability: values.availability,
+      picture: values.picture,
+    });
+    return menuItem;
+  }
+
+  static async createMenu(values: IMenu, items: IMenuItem[] = []) {
+    const menuItemIds = [];
+
+    // Create menu items if provided
+    if (items.length > 0) {
+      for (const item of items) {
+        const menuItem = await this.createMenuItem(item);
+        menuItemIds.push(menuItem._id);
+      }
+    }
+
+    // Create menu
     const menu = await Menu.create({
       name: values.name,
       description: values.description,
-      menuItems: values.menuItems,
-      vendorId: values.vendorId, // Assuming vendorId comes from the authenticated user
+      menuItems: menuItemIds,
+      vendorId: values.vendorId,
     });
-    
+
     return menu;
   }
 
-  static async getMenus () {
-    const menus = await Menu.find();
+  static async createMenuWithItems(menuValues: IMenu, itemValues: IMenuItem[]) {
+    // Validate inputs
+    if (!menuValues.name || !menuValues.vendorId) {
+      throw new ErrorResponse("Menu name and vendor ID are required.", 400);
+    }
 
+    // Create menu and associated items
+    const menu = await this.createMenu(menuValues, itemValues);
+    return menu;
+  }
+
+  static async getMenus() {
+    const menus = await Menu.find();
     return menus;
   }
 
-  static async getMenuById (id: string) {
+  static async getMenuById(id: string) {
     return await Menu.findById(id);
   }
 
-  static async getMenuByVendorId (vendorId: string) {
+  static async getMenuByVendorId(vendorId: string) {
     const menu = await Menu.findOne({ vendorId });
-
     return menu;
   }
 
-  static async getMenusOfVerifiedVendors() {
-  const menus = await Menu.find({ vendorId: { $in: await Vendor.find({ isVerified: true }).select('_id') } });
+  static async getMenusByVerifiedVendors() {
+    const verifiedVendors = await Vendor.find({ isVerified: true }).select("_id");
+    const vendorIds = verifiedVendors.map((vendor) => vendor._id);
 
-  return menus;
-}
+    const menus = await Menu.find({ vendorId: { $in: vendorIds } });
+    return menus;
+  }
 
-  // static async updateMenu (id: string, update: Partial<IMenu> ) {
-  //   const menu = await Menu.updateOne({
-  //     _id: id
-  //   }, {
-  //     $set: {
-  //       name: update.name,
-  //       description: update.description,
-  //       price: update.price,
-  //       picture: update.picture,
-  //       category: update.category,
-  //       availabilityStatus: update.availabilityStatus
-  //     }
-  //   });
+  static async getMenusByCategory(category: string) {
+    const menus = await Menu.find().populate({
+      path: "menuItems",
+      match: { category },
+    });
 
-  //   return menu;
-  // }
+    // Filter menus with at least one item in the specified category
+    return menus.filter((menu) => menu.menuItems.length > 0);
+  }
 
-  static async deleteMenu (id: string) {
+  static async deleteMenu(id: string) {
     return await Menu.findByIdAndDelete(id);
+  }
+
+  static async getPopulatedMenu() {
+    return await Menu.find()
+      .populate("vendorId", "name")
+      .populate("menuItems", "picture itemName price category availability")
+      .sort({ createdAt: -1 });
   }
 }

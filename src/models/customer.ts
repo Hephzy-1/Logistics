@@ -5,7 +5,7 @@ export interface ICustomer extends Document {
   email: string;
   password?: string;
   googleId?: number;
-  phoneNumber: string;
+  phoneNumber?: string;
   isVerified: boolean;
   token: string;
   otp?: string;
@@ -13,7 +13,7 @@ export interface ICustomer extends Document {
   resetToken?: string;
   resetTokenExpires?: Date;
   profilePic?: string;
-  address: string;
+  address?: string;
 } 
 
 const customerSchema = new Schema<ICustomer>({
@@ -26,7 +26,9 @@ const customerSchema = new Schema<ICustomer>({
     }
   },
   googleId: { type: Number, unique: true, sparse: true },
-  phoneNumber: { type: String, unique: true, required: true },
+  phoneNumber: { type: String, unique: true, required: function() {
+    return !this.googleId;
+  } },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
   otp: String,
@@ -34,7 +36,9 @@ const customerSchema = new Schema<ICustomer>({
   resetToken: String,
   resetTokenExpires: Date,
   profilePic: String,
-  address: { type: String, required: true }
+  address: { type: String, required: function() {
+    return !this.googleId;
+  } }
 },
 {
   toJSON: {

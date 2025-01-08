@@ -14,6 +14,7 @@ export const resetLink = Joi.object({
 });
 
 export const resetPass = Joi.object({
+  id: Joi.string().required(),
   newPassword: Joi.string().required(),
   confirmPassword: Joi.string().required()
 });

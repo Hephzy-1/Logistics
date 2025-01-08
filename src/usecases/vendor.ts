@@ -33,4 +33,17 @@ export class Vendor {
   static async verifiedVendors () {
     return await VendorRepository.getVerifiedVendors();
   }
+
+  static async verifiedVendorsMenu () {
+    return await VendorRepository.getVerifiedVendorsWithMenus();
+  }
+
+  static async vendorByName (name: string) {
+    return await VendorRepository.getVendorByName(name);
+  }
+  
+  static async vendorByBusinessName (businessName: string) {
+    return await VendorRepository.getVendorByBusinessName(businessName);
+  }
+
 }
