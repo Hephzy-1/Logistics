@@ -42,7 +42,7 @@ export class VendorRepository {
   }
 
   static async getVendorByToken (token: string) {
-    return await Vendor.findById({ token })
+    return await Vendor.findOne({ token })
   };
 
   static async getVendorByResetToken (token: string) {
@@ -80,7 +80,7 @@ export class VendorRepository {
   }
 
   static async getVerifiedVendors () {
-    const verifiedVendors = await Vendor.find({ isVerified: true });
+    const verifiedVendors = await Vendor.find({ isVerified: true }).select("_id");
 
     return verifiedVendors;
   }

@@ -1,49 +1,27 @@
-import { Menu, IMenu, MenuItem, IMenuItem } from "../models/menu";
-import { Vendor } from "../models/vendor"; // Assuming Vendor model exists
+import Menu, { IMenu } from "../models/menu";
+import { VendorRepository } from "../repository/vendor"; 
 import { ErrorResponse } from "../utils/errorResponse";
 
 export class MenuRepository {
-  static async createMenuItem(values: IMenuItem) {
-    const menuItem = await MenuItem.create({
-      itemName: values.itemName,
-      price: values.price,
-      category: values.category,
-      availability: values.availability,
-      picture: values.picture,
-    });
-    return menuItem;
-  }
 
-  static async createMenu(values: IMenu, items: IMenuItem[] = []) {
-    const menuItemIds = [];
-
-    // Create menu items if provided
-    if (items.length > 0) {
-      for (const item of items) {
-        const menuItem = await this.createMenuItem(item);
-        menuItemIds.push(menuItem._id);
-      }
+  static async createMenu(values: IMenu) {
+    // Validate inputs
+    if (!values.name || !values.vendorId) {
+      throw new ErrorResponse("Menu name and vendor ID are required.", 400);
     }
 
     // Create menu
     const menu = await Menu.create({
       name: values.name,
       description: values.description,
-      menuItems: menuItemIds,
+      itemName: values.itemName,
+      price: values.price,
+      category: values.category,
+      availability: values.availability,
+      picture: values.picture,
       vendorId: values.vendorId,
     });
 
-    return menu;
-  }
-
-  static async createMenuWithItems(menuValues: IMenu, itemValues: IMenuItem[]) {
-    // Validate inputs
-    if (!menuValues.name || !menuValues.vendorId) {
-      throw new ErrorResponse("Menu name and vendor ID are required.", 400);
-    }
-
-    // Create menu and associated items
-    const menu = await this.createMenu(menuValues, itemValues);
     return menu;
   }
 
@@ -62,21 +40,18 @@ export class MenuRepository {
   }
 
   static async getMenusByVerifiedVendors() {
-    const verifiedVendors = await Vendor.find({ isVerified: true }).select("_id");
-    const vendorIds = verifiedVendors.map((vendor) => vendor._id);
+    const verifiedVendors = await VendorRepository.getVerifiedVendors();
+    const vendorIds = verifiedVendors.map((vendor: any) => vendor._id);
 
     const menus = await Menu.find({ vendorId: { $in: vendorIds } });
     return menus;
   }
 
   static async getMenusByCategory(category: string) {
-    const menus = await Menu.find().populate({
-      path: "menuItems",
-      match: { category },
-    });
+    const menus = await Menu.find({match: { category }})
 
     // Filter menus with at least one item in the specified category
-    return menus.filter((menu) => menu.menuItems.length > 0);
+    return menus.filter((menu) => menu.itemName.length > 0);
   }
 
   static async deleteMenu(id: string) {

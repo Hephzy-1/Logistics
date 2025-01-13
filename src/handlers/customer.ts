@@ -1,4 +1,5 @@
 import asyncHandler from "../middlewares/async";
+import { Request, Response, NextFunction } from 'express';
 import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword, compareToken, hashToken } from "../utils/hash";
@@ -10,16 +11,6 @@ import cloudinary from "../utils/cloudinary";
 import { profile, registerCustomer } from "../validators/customer";
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
-import { ICustomer } from "../models/customer";
-import { IVendor } from '../models/vendor';
-import { IRider } from '../models/rider';
-
-
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: ICustomer | IVendor | IRider; // Assuming these types include an `id` or `_id` property
-  }
-}
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerCustomer.validate(req.body);
@@ -228,7 +219,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
-  const id = req.user?.id;
+  const id = req.customer?.id;
 
   const { error, value } = updatePass.validate(req.body);
 
@@ -276,8 +267,8 @@ export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => 
   });
 };
 
-export const updateProfile = asyncHandler(async (req, res, next) => {
-  req.body.userId = req.user?._id;
+export const updateProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  req.body.userId = req.customer?._id;
 
   if (!req.body.userId) {
     return next(new ErrorResponse('User ID is required', 400));

@@ -1,12 +1,11 @@
 import asyncHandler from '../middlewares/async';
+import { Request, Response, NextFunction } from 'express';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Vendor } from "../usecases/vendor";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
 import { comparePassword } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
-import { NextFunction, Request, Response } from 'express';
-import passport from 'passport';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
 import { profile, registerVendor } from '../validators/vendor';
 import { uploadProfilePic } from './customer';
@@ -258,7 +257,7 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
   })
 });
 
-export const updateProfile = asyncHandler(async (req, res, next) => {
+export const updateProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   
   const { error, value } = profile.validate(req.body);
 

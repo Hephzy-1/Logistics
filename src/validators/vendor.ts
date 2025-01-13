@@ -19,17 +19,10 @@ export const profile = Joi.object({
 });
 
 export const menus = Joi.object({
-  menuName: Joi.string().required(),
-  menuDescription: Joi.string().required(),
-  menuItems: Joi.array()
-    .items(
-      Joi.object({
-        itemName: Joi.string().required(),
-        price: Joi.number().required(),
-        category: Joi.string().required(),
-        availability: Joi.string().valid('Available', 'Unavailable').required(),
-      })
-    )
-    .min(1) // Ensure at least one menu item is provided
-    .required(),
+  name: Joi.string().required(),
+  description: Joi.string().required(),
+  itemName: Joi.string().required(),
+  price: Joi.number().required(),
+  category: Joi.string().required(),
+  availability: Joi.string().valid('Available', 'Unavailable').required(),
 });

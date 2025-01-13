@@ -275,7 +275,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
-  const id = req.user?.id;
+  const id = req.rider?.id;
 
   const { error, value } = updatePass.validate(req.body);
 

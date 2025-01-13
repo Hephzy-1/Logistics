@@ -52,38 +52,46 @@ const extractToken = (req: Request): string | null => {
  */
 
 // Authenticate Customer
-export const protect = asyncHandler(async (req, res, next): Promise<void> => {
+export const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
+
+  console.log(token);
 
   if (!token) {
     throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
   }
 
-  try {
-    // Verify token using your utility function
-    const decoded = await verifyToken(token);
+  // Verify token using your utility function
+  const decoded = await verifyToken(token);
 
-    console.log(decoded); 
+  console.log(decoded); 
 
-    if (!decoded) throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401))
-
-    // Check for user existence
-    const user =
-      (await Customer.customerByToken(token)) ||
-      (await Vendor.vendorByToken(token)) ||
-      (await Rider.riderByToken(token));
-
-    if (!user) {
-      throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
-    }
-
-    // Attach user to request object
-    req.user = user as ICustomer | IVendor | IRider;
-
-    next();
-  } catch (err) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.AUTH_FAILED, 401);
+  if (!decoded) {
+    throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401))
   }
+
+  // Check for user existence
+  const user =
+    (await Customer.customerByToken(token)) ||
+    (await Vendor.vendorByToken(token)) ||
+    (await Rider.riderByToken(token));
+
+    console.log(user);
+
+  if (!user) {
+    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
+  }
+
+  console.log("Token: ", token);
+  console.log("Decoded Token: ", decoded);
+  console.log("User: ", user);
+
+
+  // Attach user to request object
+  req.user = user as ICustomer | IVendor | IRider;
+
+  next();
+
 });
 
 /**
@@ -91,7 +99,7 @@ export const protect = asyncHandler(async (req, res, next): Promise<void> => {
  */
 export const isOwner = asyncHandler(async (req, res, next): Promise<void> => {
   const { id } = req.params; 
-  const currentUserId = req.user?._id;
+  const currentUserId = req.customer?.id || req.vendor?.id || req.rider?.id;
 
   if (!id) throw next(new ErrorResponse('Id is required in params', 401));
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword } from '../handlers/vendor';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile } from '../handlers/vendor';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
@@ -20,7 +20,7 @@ route.put('/reset/:resetToken', resetPassword);
 route.use(protect);
 
 route.put('/update-password/:id', updatePassword);
-route.put('/update-profile', isOwner, upload.single('profilePic'));
-route.post('/create-menu', upload.array('menuItem.picture'), newMenu);
+route.put('/update-profile', isOwner, upload.single('profilePic'), updateProfile);
+route.post('/create-menu', upload.single('picture'), newMenu);
 
 export default route;

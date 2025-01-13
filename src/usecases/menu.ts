@@ -1,20 +1,11 @@
-import { IMenu } from "../models/menu";
 import { MenuRepository } from "../repository/menu";
-import { Menu, IMenu, MenuItem, IMenuItem } from "../models/menu";
-import { Vendor } from "../models/vendor"; // Assuming Vendor model exists
+import { IMenu } from "../models/menu";
 import { ErrorResponse } from "../utils/errorResponse";
 
 export class Menu {
-  static async createItem(values: IMenuItem) {
-    return await MenuRepository.createMenuItem(values);
-  }
 
-  static async create(values: IMenu, items: IMenuItem[] = []) {
-    return await MenuRepository.createMenu(values, items);
-  }
-
-  static async createWithItems(menuValues: IMenu, itemValues: IMenuItem[]) {
-    return await MenuRepository.createMenuWithItems(menuValues, itemValues);
+  static async createNewMenu(menuValues: IMenu) {
+    return await MenuRepository.createMenu(menuValues);
   }
 
   static async getMenu() {
@@ -26,7 +17,7 @@ export class Menu {
   }
 
   static async menuByVendorId(vendorId: string) {
-    return await Menu.getMenuByVendorId( vendorId);
+    return await MenuRepository.getMenuByVendorId( vendorId);
   }
 
   static async menusByVerifiedVendors() {
@@ -34,7 +25,7 @@ export class Menu {
   }
 
   static async menusByVendor(vendorId: string) {
-    return await Menu.getMenusByVendor( vendorId);
+    return await MenuRepository.getMenuByVendorId( vendorId);
   }
 
   static async menusByCategory(category: string) {

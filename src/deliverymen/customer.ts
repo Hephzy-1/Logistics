@@ -1,8 +1,9 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu } from '../handlers/customer';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors } from '../handlers/customer';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
+import { getVerifiedVendorsMenus } from '../handlers/menu';
 
 export const route = express.Router();
 
@@ -20,6 +21,6 @@ route.use(protect)
 route.put('/update-password', updatePassword);
 route.put('/update-profile/:id', isOwner, upload.single('profilePic'), updateProfile);
 route.get('/get-vendors', getAllVerifiedVendors);
-route.get('get-menus', getAllVerifiedVendorsMenu);
+route.get('/get-menus', getVerifiedVendorsMenus);
 
 export default route;

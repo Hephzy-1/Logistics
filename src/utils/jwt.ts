@@ -15,5 +15,5 @@ export const generateToken = async (email: string) => {
 }
 
 export const verifyToken = async (token: string) => {
-  return jwt.verify(token, JWT_SECRET)
-}
+  return jwt.verify(token, JWT_SECRET);
+};
