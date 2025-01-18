@@ -11,7 +11,7 @@ import customerRoute, { route } from './deliverymen/customer';
 import vendorRoute from './deliverymen/vendor';
 import riderRoute from './deliverymen/rider';
 import { oAuth } from "./handlers/rider";
-import multer from "multer";
+import upload from "./utils/multer";
 
 const app = express();
 
@@ -19,12 +19,10 @@ if (!environment.SESSION_SECRET) {
   throw new ErrorResponse('Secret key is required', 500);
 }
 
-const upload = multer(); // Multer for handling multipart form-data
-
 app.use(express.json());
 app.use(cors({ credentials: true }));
-app.use(express.urlencoded({ extended: true })); // For x-www-form-urlencoded
-app.use(upload.any()); // Enable handling of multipart form-data
+app.use(express.urlencoded({ extended: true })); 
+app.use(upload.any()); 
 app.use(session({ secret: environment.SESSION_SECRET, resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());

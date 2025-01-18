@@ -3,11 +3,11 @@ import { Request, Response, NextFunction } from 'express';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Vendor } from "../usecases/vendor";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
-import { comparePassword } from '../utils/hash';
+import { comparePassword, compareToken, hashToken } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
-import { profile, registerVendor } from '../validators/vendor';
+import { profile, registerVendor, menus } from '../validators/vendor';
 import { uploadProfilePic } from './customer';
 import { AppResponse } from '../middlewares/appResponse';
 
@@ -153,50 +153,33 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { email } = value;
 
   const exists = await Vendor.vendorByEmail(email);
+  console.log(exists);
   
   if (!exists) {
-    throw next( new ErrorResponse("This Vendor doesn't exists", 404));
+    throw next( new ErrorResponse("This vendor doesn't exists", 404));
   }
 
   const resetToken = await generateToken(email);
   const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
 
-  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  const hashedToken = await hashToken(resetToken);
+  console.log(hashedToken)
 
   exists.resetToken = hashedToken;
   exists.resetTokenExpires = expiry;
   await exists.save();
 
-  const sendMail = await sendResetLink(resetToken, email, 'Vendor');
+  const sendMail = await sendResetLink(resetToken, email, 'vendor');
 
-  return res.status(200).json({
-    success: true,
-    message: 'Reset link has been sent',
-    token: resetToken,
-    sentMail: sendMail
-  });
+  return AppResponse(res, 200, { resetToken, id: exists._id }, 'Reset link has been sent');
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const token = req.params.resetToken;
+  const token = req.params.token;
 
   if (!token) {
     console.error('Token is required');
     throw next(new ErrorResponse("Reset Token is required", 401));
-  }
-
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-  const user = await Vendor.vendorByResetToken(hashedToken);
-
-  if (!user) {
-    throw next(new ErrorResponse('No user found', 404));
-  }
-
-  // Check if token has expired
-  if (!user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
-    console.error("Reset token has expired");
-    throw next(new ErrorResponse("Reset token has expired", 400));
   }
 
   const { error, value } = resetPass.validate(req.body);
@@ -206,19 +189,32 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const { newPassword, confirmPassword } = value;
+  const { id, newPassword, confirmPassword } = value;
 
   if (confirmPassword !== newPassword) {
     throw next(new ErrorResponse("Passwords don't match", 400));
   }
 
+  const user = await Vendor.vendorById(id);
+
+  console.log(user)
+
+  if (!user || !user.resetToken) {
+    throw next(new ErrorResponse('No user found', 404));
+  }
+
+  // Check if token has expired
+  if (!user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
+    console.error("Reset token has expired");
+    throw next(new ErrorResponse("Reset token has expired", 402));
+  }
+
+  const hashedToken = await compareToken(token, user.resetToken)
+  console.log(hashedToken);
+
   const update = await Vendor.updatePassword(user.id, newPassword);
 
-  return res.status(203).json({
-    success: true,
-    message: 'Password has been updated',
-    data: update
-  })
+  return AppResponse(res, 200, null, 'Password has been updated')
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
@@ -290,3 +286,21 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response, ne
   });
 });
 
+export const newMenu = asyncHandler(async (req, res, next) => {
+  console.log(req.vendor)
+  const { error, value } = menus.validate(req.body);
+
+  if (error) return next(new ErrorResponse(error.details[0].message, 400));
+
+  // if (!req.file) {
+  //   return next(new ErrorResponse("Picture is required", 400));
+  // }
+
+  req.body.vendorId = req.vendor?._id; 
+  // req.body.picture = await uploadProfilePic(req.file);
+  console.log(req.body)
+
+  const createdMenu = await Vendor.createNewMenu(req.body);
+
+  return AppResponse(res, 201, createdMenu, "Menu created successfully");
+});

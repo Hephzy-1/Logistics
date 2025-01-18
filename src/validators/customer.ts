@@ -13,3 +13,8 @@ export const profile = Joi.object({
   phoneNumber: Joi.string(),
   address: Joi.string().alphanum().required(),
 });
+
+export const addCart = Joi.object({
+  item: Joi.string().required(),
+  quantity: Joi.number().required()
+})

@@ -8,7 +8,7 @@ import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
 import cloudinary from "../utils/cloudinary";
-import { profile, registerCustomer } from "../validators/customer";
+import { profile, registerCustomer, addCart } from "../validators/customer";
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 
@@ -172,7 +172,7 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
 
   const sendMail = await sendResetLink(resetToken, email, 'customer');
 
-  return AppResponse(res, 200, resetToken, 'Reset link has been sent');
+  return AppResponse(res, 200, { resetToken, id: exists._id }, 'Reset link has been sent');
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
@@ -252,13 +252,18 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 });
 
 export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => {
+  console.log('Uploading file to Cloudinary...');
+  console.log('File buffer:', file.buffer);
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: 'image' },
       (error, result) => {
         if (error) {
+          console.error('Cloudinary Error:', error);
           reject(new ErrorResponse('Image upload failed', 500));
         } else {
+          console.log('Cloudinary Upload Result:', result);
           resolve(result?.secure_url || '');
         }
       }
@@ -266,6 +271,7 @@ export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => 
     uploadStream.end(file.buffer);
   });
 };
+
 
 export const updateProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   req.body.userId = req.customer?._id;
@@ -288,7 +294,6 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response, ne
 
   return AppResponse(res, 203, userProfile, 'Profile updated successfully');
 });
-
 
 export const getAllVerifiedVendorsMenu = asyncHandler( async (req, res, next) => {
   const verifiedVendors = await Vendor.verifiedVendorsMenu();
@@ -315,24 +320,90 @@ export const getSpecificVendorById = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse('Vendor not found', 404));
   }
   
-  return res.status(200).json({
-    success: true,
-    message: 'Here is the specific vendor',
-    data: vendor
-  });
+  return AppResponse(res, 200, vendor, 'Here is the specific vendor')
 });
 
 export const getVendorByBusinessName = asyncHandler(async (req, res, next) => {
-  const business = req.params.businessName;
+  const business = req.params.businessName; 
   
   const verifiedBusiness = await Vendor.vendorByBusinessName(business);
 
   if (!verifiedBusiness || !verifiedBusiness.isVerified) throw next(new ErrorResponse('No Business found', 400));
 
-  
+  return AppResponse(res, 200, null, 'Here is the business info')
+});
 
-  return res.status(200).json({
-    success: true,
-    message: 'Here is the business info'
-  })
-})
+export const addItemToCart = asyncHandler(async (req, res, next) => {
+
+  const { error, value } = addCart.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400))
+  }
+  const { item, quantity } = value;
+
+  value.customerId = req.customer?._id;
+
+  let cart = await Customer.customerCart(value.customerId);
+
+  if (cart) {
+    
+    const existingItem = cart.items.find((i:any) => i.menuItem.toString() === item.menuItem);
+
+    if (existingItem) {
+      
+      existingItem.quantity += quantity;
+    } else {
+      console.log(item);
+      cart.items.push({ menuItem: item, quantity });
+    }
+
+    cart = await cart.save();
+  } else {
+    
+    const vendorId = await Vendor.vendorIdFromMenu(item);
+
+    if (!vendorId) {
+      return next(new ErrorResponse("Vendor not found for the given menu item.", 404));
+    }
+
+    const cartItems: any = {
+      customerId: value.customerId,
+      vendorId,
+      items: [{ menuItem: item, quantity }], 
+    }
+
+    cart = await Customer.createNewCart(cartItems);
+  }
+
+  return AppResponse(res, 200, cart, "Item(s) added to cart successfully");
+});
+
+
+export const clearCart = asyncHandler(async (req, res, next) => {
+  const { customerId } = req.params;
+
+  if (!customerId) {
+    return next(new ErrorResponse("Customer ID is required.", 400));
+  }
+
+  // Clear the cart
+  const result = await Customer.clearCart(customerId);
+
+  if (!result) {
+    return next(new ErrorResponse("Failed to clear cart.", 500));
+  }
+
+  return AppResponse(res, 200, null, "Cart cleared successfully");
+});
+
+export const getCartsGroupedByVendor = asyncHandler(async (req, res, next) => {
+  const groupedCarts = await Customer.groupedCart();
+
+  if (!groupedCarts || groupedCarts.length === 0) {
+    return next(new ErrorResponse("No carts found.", 404));
+  }
+
+  return AppResponse(res, 200, groupedCarts, "Carts grouped by vendor retrieved successfully");
+});
+

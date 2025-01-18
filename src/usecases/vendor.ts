@@ -1,5 +1,6 @@
 import { IVendor } from '../models/vendor';
 import { VendorRepository } from '../repository/vendor';
+import { IMenu } from '../models/menu';
 
 export class Vendor {
   static async create (vendor:IVendor) {
@@ -34,8 +35,12 @@ export class Vendor {
     return await VendorRepository.getVerifiedVendors();
   }
 
+  static async verifiedVendorsId () {
+    return await VendorRepository.getVerifiedVendorsId();
+  }
+
   static async verifiedVendorsMenu () {
-    return await VendorRepository.getVerifiedVendorsWithMenus();
+    return await VendorRepository.getMenusByVerifiedVendors();
   }
 
   static async vendorByName (name: string) {
@@ -46,4 +51,43 @@ export class Vendor {
     return await VendorRepository.getVendorByBusinessName(businessName);
   }
 
+  static async createNewMenu(menuValues: IMenu) {
+    return await VendorRepository.createMenu(menuValues);
+  }
+
+  static async getMenu() {
+    return await VendorRepository.getMenus();
+  }
+
+  static async menuById(id: string) {
+    return await VendorRepository.getMenuById(id);
+  }
+
+  static async menuByVendorId(vendorId: string) {
+    return await VendorRepository.getMenuByVendorId( vendorId);
+  }
+
+  static async menusByVerifiedVendors() {
+    return await VendorRepository.getMenusByVerifiedVendors;
+  }
+
+  static async menusByVendor(vendorId: string) {
+    return await VendorRepository.getMenuByVendorId( vendorId);
+  }
+
+  static async menusByCategory(category: string) {
+    return await VendorRepository.getMenusByCategory(category);
+  }
+
+  static async deleteMenu(id: string) {
+    return await VendorRepository.deleteMenu(id);
+  }
+
+  static async populatedMenu() {
+    return await VendorRepository.getPopulatedMenu();
+  }
+
+  static async vendorIdFromMenu (menuId:string) {
+    return await VendorRepository.getVendorIdFromMenu(menuId)
+  }
 }

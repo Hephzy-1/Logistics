@@ -13,8 +13,8 @@ import { verifyToken } from '../utils/jwt';
 declare module 'express' {
   export interface Request {
     customer?: ICustomer;
-    vendor?: IVendor
-    rider?: IRider 
+    vendor?: IVendor;
+    rider?: IRider;
   }
 }
 
@@ -51,51 +51,44 @@ const extractToken = (req: Request): string | null => {
  * Authentication middleware
  */
 
-// Authenticate Customer
 export const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
-
-  console.log(token);
 
   if (!token) {
     throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_MISSING, 401);
   }
 
-  // Verify token using your utility function
   const decoded = await verifyToken(token);
 
-  console.log(decoded); 
-
   if (!decoded) {
-    throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401))
+    throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401));
   }
 
-  // Check for user existence
-  const user =
-    (await Customer.customerByToken(token)) ||
-    (await Vendor.vendorByToken(token)) ||
-    (await Rider.riderByToken(token));
-
-    console.log(user);
-
-  if (!user) {
-    throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
+  // Check for the user in each model
+  let user = await Customer.customerByToken(token);
+  if (user) {
+    req.customer = user as ICustomer;
+    return next();
   }
 
-  console.log("Token: ", token);
-  console.log("Decoded Token: ", decoded);
-  console.log("User: ", user);
+  user = await Vendor.vendorByToken(token);
+  if (user) {
+    req.vendor = user as IVendor; 
+    return next();
+  }
 
+  user = await Rider.riderByToken(token);
+  if (user) {
+    req.rider = user as IRider; 
+    return next();
+  }
 
-  // Attach user to request object
-  req.user = user as ICustomer | IVendor | IRider;
-
-  next();
-
+  // If no user is found
+  throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
 });
 
 /**
- * Resource ownership middleware 5203774966
+ * Resource ownership middleware 
  */
 export const isOwner = asyncHandler(async (req, res, next): Promise<void> => {
   const { id } = req.params; 

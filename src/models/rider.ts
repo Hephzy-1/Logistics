@@ -5,12 +5,12 @@ export interface IRider extends Document {
   email: string;
   password?: string;
   googleId?: number;
-  phoneNumber: string;
+  phoneNumber?: string;
   isVerified: boolean;
-  address: string;
-  vehicleNumber: string;
-  vehicleType: string;
-  profilePic: string;
+  address?: string;
+  vehicleNumber?: string;
+  vehicleType?: string;
+  profilePic?: string;
   token: string;
   otp?: string;
   otpExpires?: Date;

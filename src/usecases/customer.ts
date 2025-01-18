@@ -1,5 +1,6 @@
 import { ICustomer } from '../models/customer';
 import { CustomerRepository } from '../repository/customer';
+import { ICart, ICartItem } from '../models/cart';
 
 export class Customer {
   static async create (customer:ICustomer) {
@@ -30,4 +31,23 @@ export class Customer {
     return await CustomerRepository.updateCustomerProfile(values);
   }
 
+  static async createNewCart (values: ICart) {
+    return await CustomerRepository.createCart(values);
+  }
+
+  static async getCart () {
+    return await CustomerRepository.getCart();
+  }
+
+  static async clearCart(customerId: string) {
+    return await CustomerRepository.clearCartForCustomer(customerId)
+  }
+
+  static async groupedCart() {
+    return await CustomerRepository.getCartsGroupedByVendor();
+  }
+
+  static async customerCart (customerId: string) {
+    return await CustomerRepository.getCustomerCart(customerId);
+  }
 }

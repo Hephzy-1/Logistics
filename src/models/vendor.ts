@@ -10,7 +10,7 @@ export interface IVendor extends Document {
   address?: string;
   businessName?: string;
   businessType?: string;
-  profilePic: string;
+  profilePic?: string;
   token: string;
   otp?: string;
   otpExpires?: Date;

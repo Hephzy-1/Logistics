@@ -8,7 +8,7 @@ export interface IMenu extends Document {
   price: number;
   category: string;
   availability: 'Available' | 'Unavailable';
-  picture: string;
+  // picture: string;
   vendorId: Types.ObjectId;
 }
 
@@ -23,7 +23,7 @@ const menuSchema = new Schema<IMenu>({
     enum: ['Available', 'Unavailable'],
     required: true,
   },
-  picture: { type: String, required: true },
+  // picture: { type: String, required: true },
   vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
 }, {
   timestamps: true,
