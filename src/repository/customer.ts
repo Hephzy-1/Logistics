@@ -94,9 +94,11 @@ export class CustomerRepository {
     return cart;
   }
 
-  static async getCart() {
+  static async getCart(customerId: string) {
     return await Cart.aggregate([
       {
+        $match: { customerId }
+      },{
         $lookup: {
           from: "menu", 
           localField: "items.menuItem", 
@@ -112,7 +114,7 @@ export class CustomerRepository {
         },
       },
       {
-        $sort: { "_id": 1 }, // Sort by vendorId
+        $sort: { "_id": 1 }, 
       },
     ]);
   }
@@ -121,19 +123,20 @@ export class CustomerRepository {
     return await Cart.deleteOne({ customerId });
   }
 
-  static async getCartsGroupedByVendor() {
+  static async getCartsGroupedByVendor(customerId: string) {
     const cart = await Cart.aggregate([
       {
+        $match: { customerId }
+      },
+      {
         $lookup: {
-          from: "Menu",
+          from: "menu",
           localField: "items.menuItem",
           foreignField: "_id",
           as: "menuItems", 
         },
       },
-  
       { $unwind: "$items" },
-  
       {
         $addFields: {
           "items.totalPrice": {
@@ -144,36 +147,15 @@ export class CustomerRepository {
           },
         },
       },
-  
       {
         $group: {
-          _id: {
-            vendorId: "$vendorId",
-            customerId: "$customerId",
-          },
+          _id: "$vendorId",
           items: { $push: "$items" },
           totalPrice: { $sum: "$items.totalPrice" }, 
           createdAt: { $first: "$createdAt" },
           updatedAt: { $first: "$updatedAt" },
         },
       },
-  
-      {
-        $group: {
-          _id: "$_id.vendorId",
-          carts: {
-            $push: {
-              _id: "$_id.customerId",
-              items: "$items",
-              totalPrice: "$totalPrice",
-              createdAt: "$createdAt",
-              updatedAt: "$updatedAt",
-            },
-          },
-          totalPrice: { $sum: "$totalPrice" }, 
-        },
-      },
-  
       { $sort: { "_id": 1 } },
     ]);
 

@@ -383,7 +383,7 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
 export const getCart = asyncHandler(async (req, res, next) => {
   const customerId = req.customer?._id as string;
 
-  const cart = Customer.customerCart(customerId);
+  const cart = await Customer.groupedCart(customerId);
 
   if (!cart) throw next(new ErrorResponse('No item in cart', 400));
 
@@ -409,13 +409,13 @@ export const clearCart = asyncHandler(async (req, res, next) => {
 export const createOrderFromCart = asyncHandler(async (req, res, next) => {
   const customerId = req.customer?._id as string;
 
-  const cart = await Customer.customerCart(customerId);
+  let cartItems = await Customer.groupedCart(customerId);
 
-  if (!cart || !cart.items || cart.items.length === 0) {
+  if (!cartItems || cartItems.length === 0) {
     return next(new ErrorResponse("Your cart is empty.", 400));
   }
 
-  const groupedItems = cart.items.reduce((acc: any, item: any) => {
+  const groupedItems = cartItems.reduce((acc: any, item: any) => {
     const vendorId = item.menuItem.vendorId.toString();
     if (!acc[vendorId]) {
       acc[vendorId] = [];

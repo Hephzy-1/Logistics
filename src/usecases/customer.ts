@@ -36,16 +36,16 @@ export class Customer {
     return await CustomerRepository.createCart(values);
   }
 
-  static async getCart () {
-    return await CustomerRepository.getCart();
+  static async getCart (customerId: string) {
+    return await CustomerRepository.getCart(customerId);
   }
 
   static async clearCart(customerId: string) {
     return await CustomerRepository.clearCartForCustomer(customerId)
   }
 
-  static async groupedCart() {
-    return await CustomerRepository.getCartsGroupedByVendor();
+  static async groupedCart(customerId: string) {
+    return await CustomerRepository.getCartsGroupedByVendor(customerId);
   }
 
   static async customerCart (customerId: string) {
