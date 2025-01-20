@@ -4,6 +4,7 @@ import { generateToken } from "../utils/jwt";
 import crypto from 'crypto';
 import Cart, { ICart, ICartItem } from '../models/cart';
 import { ErrorResponse } from "../utils/errorResponse";
+import Order, { IOrder } from "../models/order";
 
 export class CustomerRepository {
   static async createCustomer (values: ICustomer) {
@@ -194,6 +195,6 @@ export class CustomerRepository {
       items: values.items
     });
 
-    return menu;
+    return order;
   }
 }

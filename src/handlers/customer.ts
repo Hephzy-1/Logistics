@@ -381,7 +381,7 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
 });
 
 export const getCart = asyncHandler(async (req, res, next) => {
-  const customerId = req.customer?._id;
+  const customerId = req.customer?._id as string;
 
   const cart = Customer.customerCart(customerId);
 
@@ -391,7 +391,7 @@ export const getCart = asyncHandler(async (req, res, next) => {
 })
 
 export const clearCart = asyncHandler(async (req, res, next) => {
-  const customerId = req.customer?._id.toString();
+  const customerId = req.customer?._id as string;
 
   if (!customerId) {
     return next(new ErrorResponse("Customer ID is required.", 400));
@@ -407,32 +407,40 @@ export const clearCart = asyncHandler(async (req, res, next) => {
 });
 
 export const createOrderFromCart = asyncHandler(async (req, res, next) => {
-  const customerId = req.customer?._id.toString();
+  const customerId = req.customer?._id as string;
 
-  const groupedCarts = await Customer.customerCart(customerId);
+  const cart = await Customer.customerCart(customerId);
 
-  if (!groupedCarts || groupedCarts.length === 0) {
+  if (!cart || !cart.items || cart.items.length === 0) {
     return next(new ErrorResponse("Your cart is empty.", 400));
   }
 
+  const groupedItems = cart.items.reduce((acc: any, item: any) => {
+    const vendorId = item.menuItem.vendorId.toString();
+    if (!acc[vendorId]) {
+      acc[vendorId] = [];
+    }
+    acc[vendorId].push(item);
+    return acc;
+  }, {});
+
   const orders = await Promise.all(
-    groupedCarts.map(async (group) => {
-      const { vendorId, items } = group;
+    Object.keys(groupedItems).map(async (vendorId) => {
+      const items = groupedItems[vendorId];
+      const totalPrice = items.reduce((sum: number, item: any) => sum + item.quantity * item.menuItem.price, 0);
 
-      const totalPrice = items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0);
-
-      const orderItem = items.map((item: any) => ({
-        menuItem: item.menuItem,
+      const orderItems = items.map((item: any) => ({
+        menuItem: item.menuItem._id,
         quantity: item.quantity,
-        totalPrice: item.quantity * item.price,
-      }))
+        totalPrice: item.quantity * item.menuItem.price,
+      }));
 
       const order: any = {
         customerId,
         vendorId,
-        items: orderItem,
+        items: orderItems,
         totalPrice,
-      }
+      };
 
       return Customer.createNewOrder(order);
     })

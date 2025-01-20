@@ -1,6 +1,7 @@
 import { ICustomer } from '../models/customer';
 import { CustomerRepository } from '../repository/customer';
 import { ICart, ICartItem } from '../models/cart';
+import { IOrder } from '../models/order';
 
 export class Customer {
   static async create (customer:ICustomer) {
@@ -54,3 +55,4 @@ export class Customer {
   static async createNewOrder (values: IOrder) {
     return await CustomerRepository.createOrder(values)
   }
+}
