@@ -1,31 +1,36 @@
-import { Document, Schema, model } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export interface IOrder extends Document {
-  vendorId: string;
-  customerId: string;
-  cartId: string;
+export interface IOrderItem {
+  menuItem: Types.ObjectId;
+  quantity: number;
   totalPrice: number;
-  status: 'pending' | 'completed' | 'cancelled';
-  availableForPickup: boolean;
 }
 
-const OrderSchema = new Schema<IOrder> ({
-  customerId: { type: String, required: true },
-  cartId: { type: String, required: true },
-  totalPrice: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'completed', 'cancelled'], required: true, default: 'pending' },
-  availableForPickup: { type: Boolean, required: true, default: false }
-}, {
-  timestamps: true,
-  toJSON: {
-    transform: function (doc, ret) {
-      delete ret.__v;
-      delete ret.createdAt;
-      delete ret.updatedAt;
-    }
-  }
-});
+export interface IOrder extends Document {
+  customerId: Types.ObjectId;
+  vendorId: Types.ObjectId;
+  items: IOrderItem[];
+  totalPrice: number;
+  status: string;
+}
 
-const Order = model<IOrder>('Order', OrderSchema);
+const OrderSchema = new Schema<IOrder>(
+  {
+    customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+    items: [
+      {
+        menuItem: { type: Schema.Types.ObjectId, ref: 'Menu', required: true },
+        quantity: { type: Number, required: true },
+        totalPrice: { type: Number, required: true },
+      },
+    ],
+    totalPrice: { type: Number, required: true },
+    status: { type: String, enum: ['pending', 'completed', 'canceled'], default: 'pending' },
+  },
+  { timestamps: true }
+);
+
+const Order = mongoose.model<IOrder>('Order', OrderSchema);
 
 export default Order;

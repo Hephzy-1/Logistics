@@ -362,6 +362,7 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
   } else {
     
     const vendorId = await Vendor.vendorIdFromMenu(item);
+    console.log(vendorId)
 
     if (!vendorId) {
       return next(new ErrorResponse("Vendor not found for the given menu item.", 404));
@@ -379,15 +380,23 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, cart, "Item(s) added to cart successfully");
 });
 
+export const getCart = asyncHandler(async (req, res, next) => {
+  const customerId = req.customer?._id;
+
+  const cart = Customer.customerCart(customerId);
+
+  if (!cart) throw next(new ErrorResponse('No item in cart', 400));
+
+  return AppResponse(res, 200, cart, 'Here is the retrieved cart')
+})
 
 export const clearCart = asyncHandler(async (req, res, next) => {
-  const { customerId } = req.params;
+  const customerId = req.customer?._id.toString();
 
   if (!customerId) {
     return next(new ErrorResponse("Customer ID is required.", 400));
   }
 
-  // Clear the cart
   const result = await Customer.clearCart(customerId);
 
   if (!result) {
@@ -397,13 +406,39 @@ export const clearCart = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, null, "Cart cleared successfully");
 });
 
-export const getCartsGroupedByVendor = asyncHandler(async (req, res, next) => {
-  const groupedCarts = await Customer.groupedCart();
+export const createOrderFromCart = asyncHandler(async (req, res, next) => {
+  const customerId = req.customer?._id.toString();
+
+  const groupedCarts = await Customer.customerCart(customerId);
 
   if (!groupedCarts || groupedCarts.length === 0) {
-    return next(new ErrorResponse("No carts found.", 404));
+    return next(new ErrorResponse("Your cart is empty.", 400));
   }
 
-  return AppResponse(res, 200, groupedCarts, "Carts grouped by vendor retrieved successfully");
-});
+  const orders = await Promise.all(
+    groupedCarts.map(async (group) => {
+      const { vendorId, items } = group;
 
+      const totalPrice = items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0);
+
+      const orderItem = items.map((item: any) => ({
+        menuItem: item.menuItem,
+        quantity: item.quantity,
+        totalPrice: item.quantity * item.price,
+      }))
+
+      const order: any = {
+        customerId,
+        vendorId,
+        items: orderItem,
+        totalPrice,
+      }
+
+      return Customer.createNewOrder(order);
+    })
+  );
+
+  await Customer.clearCart(customerId);
+
+  return AppResponse(res, 201, orders, "Orders created successfully.");
+});

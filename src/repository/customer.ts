@@ -185,4 +185,15 @@ export class CustomerRepository {
 
     return cart;
   }
+
+  static async createOrder (values: IOrder) {
+
+    const order = await Order.create({
+      customerId: values.customerId,
+      vendorId: values.vendorId,
+      items: values.items
+    });
+
+    return menu;
+  }
 }

@@ -65,19 +65,20 @@ export class VendorRepository {
     return vendor;
   };
 
-  static async updateVendorProfile (values: IVendor) {
-    const vendor = await Vendor.updateOne({
-      _id: values.id,
-    }, {
-      $set: {
-        profilePic: values.profilePic,
-        address: values.address,
-        phoneNumber: values.phoneNumber,
-        businessName: values.businessName,
-        businessType: values.businessType
+  static async updateVendorProfile (values: Partial<IVendor>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof IVendor] !== undefined) {
+        updates[key] = values[key as keyof IVendor];
       }
-    });
-
+    }
+  
+    const vendor = await Vendor.updateOne(
+      { _id: values.id },
+      { $set: updates }
+    );
+  
     return vendor;
   }
 
@@ -175,5 +176,22 @@ export class VendorRepository {
     }
 
     return menu.vendorId;
+  }
+
+  static async updateMenu (values: Partial<IMenu>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof IMenu] !== undefined) {
+        updates[key] = values[key as keyof IMenu];
+      }
+    }
+  
+    const menu = await Menu.updateOne(
+      { _id: values.id },
+      { $set: updates }
+    );
+  
+    return menu;
   }
 }
