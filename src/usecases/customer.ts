@@ -36,10 +36,6 @@ export class Customer {
     return await CustomerRepository.createCart(values);
   }
 
-  static async getCart (customerId: string) {
-    return await CustomerRepository.getCart(customerId);
-  }
-
   static async clearCart(customerId: string) {
     return await CustomerRepository.clearCartForCustomer(customerId)
   }

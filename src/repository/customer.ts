@@ -88,35 +88,10 @@ export class CustomerRepository {
     const cart = await Cart.create({
       customerId: values.customerId,
       vendorId: values.vendorId,
-      items: values.items,
+      items: values.items
     });
   
     return cart;
-  }
-
-  static async getCart(customerId: string) {
-    return await Cart.aggregate([
-      {
-        $match: { customerId }
-      },{
-        $lookup: {
-          from: "menu", 
-          localField: "items.menuItem", 
-          foreignField: "_id", 
-          as: "menuItems",
-        },
-      },
-      {
-        $group: {
-          _id: "$vendorId",
-          items: { $push: "$$ROOT" },
-          totalPrice: { $sum: "$totalPrice" },
-        },
-      },
-      {
-        $sort: { "_id": 1 }, 
-      },
-    ]);
   }
 
   static async clearCartForCustomer(customerId: string) {
@@ -125,43 +100,26 @@ export class CustomerRepository {
 
   static async getCartsGroupedByVendor(customerId: string) {
     const cart = await Cart.aggregate([
-      {
-        $match: { customerId }
-      },
-      {
-        $lookup: {
-          from: "menu",
-          localField: "items.menuItem",
-          foreignField: "_id",
-          as: "menuItems", 
-        },
-      },
+      { $match: { customerId } },
       { $unwind: "$items" },
-      {
-        $addFields: {
-          "items.totalPrice": {
-            $multiply: [
-              { $arrayElemAt: ["$menuItems.price", 0] }, 
-              "$items.quantity",
-            ],
-          },
-        },
-      },
       {
         $group: {
           _id: "$vendorId",
           items: { $push: "$items" },
-          totalPrice: { $sum: "$items.totalPrice" }, 
-          createdAt: { $first: "$createdAt" },
-          updatedAt: { $first: "$updatedAt" },
-        },
+          totalPrice: { $first: "$totalPrice" },
+        }
       },
-      { $sort: { "_id": 1 } },
+      { $sort: { "_id": 1 } }
     ]);
-
-    console.log(cart);
+  
+    console.log(`Aggregated Cart: ${JSON.stringify(cart, null, 2)}`);
+  
+    cart.forEach((vendorCart: any) => {
+      console.log(`Vendor: ${vendorCart._id}, Total Price: ${vendorCart.totalPrice}`);
+    });
+  
     return cart;
-  }
+  }    
   
   static async getCustomerCart (customerId: string) {
     const cart = Cart.findOne({ customerId });
