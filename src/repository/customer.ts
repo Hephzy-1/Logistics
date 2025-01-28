@@ -176,10 +176,11 @@ export class CustomerRepository {
       vendorId: values.vendorId,
       items: values.items,
       totalPrice: values.totalPrice,
-      availableForPickup: values.availableForPickup ?? false,
-      orderStatus: values.orderStatus ?? 'new',
-      acceptedStatus: values.acceptedStatus ?? 'pending',
-      deliveredStatus: values.deliveredStatus ?? false
+      availableForPickup: false,
+      orderStatus: 'new',
+      acceptedStatus: 'pending',
+      deliveredStatus: false,
+      pickedUp: false
     });
 
     return order;

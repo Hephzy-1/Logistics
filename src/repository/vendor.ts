@@ -209,4 +209,10 @@ export class VendorRepository {
 
     return order;
   }
+
+  static async getAllNewOrders () {
+    const order = await Order.find({ orderStatus: 'new' });
+
+    return order;
+  }
 }

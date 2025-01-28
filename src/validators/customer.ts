@@ -17,4 +17,8 @@ export const profile = Joi.object({
 export const addCart = Joi.object({
   item: Joi.string().required(),
   quantity: Joi.number().required()
+});
+
+export const removeCart = Joi.object({
+  item: Joi.string().required()
 })

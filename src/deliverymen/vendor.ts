@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus } from '../handlers/vendor';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus, updateAvailability } from '../handlers/vendor';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
@@ -27,5 +27,6 @@ route.post('/create-menu', newMenu);
 route.put('/update-menu', updateMenu)
 route.get('/getOrder', getOrdersByVendor);
 route.put('/update-orderStatus', updateAcceptedStatus)
+route.put('/available-order', updateAvailability)
 
 export default route;

@@ -8,7 +8,7 @@ import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
 import cloudinary from "../utils/cloudinary";
-import { profile, registerCustomer, addCart } from "../validators/customer";
+import { profile, registerCustomer, addCart, removeCart } from "../validators/customer";
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 
@@ -410,6 +410,42 @@ export const getCart = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, responseData, 'Here is the retrieved cart');
 });
 
+export const removeItemFromCart = asyncHandler(async (req, res, next) => {
+  const { error, value } = removeCart.validate(req.body);
+
+  if (error) {
+    return next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { item } = value;
+  value.customerId = req.customer?._id;
+
+  let cart = await Customer.customerCart(value.customerId);
+
+  if (cart) {
+    const existingItem = cart.items.find((i) => i.menuItem._id.toString() === item);
+    if (existingItem) {
+      if (existingItem.quantity > 1) {
+        existingItem.quantity -= 1;
+      } else {
+        cart.items = cart.items.filter((i) => i.menuItem._id.toString() !== item);
+      }
+    }
+
+    cart = await cart.populate('items.menuItem', 'price');
+    cart.totalPrice = cart.items.reduce((sum: number, currentItem: any) => {
+      const itemTotalPrice = currentItem.menuItem.price * currentItem.quantity;
+      return sum + itemTotalPrice;
+    }, 0);
+
+    cart = await cart.save();
+  } else {
+    return next(new ErrorResponse("Cart not found.", 404));
+  }
+
+  return AppResponse(res, 200, cart, "Item removed from cart successfully");
+});
+
 export const clearCart = asyncHandler(async (req, res, next) => {
   const customerId = req.customer?._id as string;
 
@@ -471,4 +507,3 @@ export const getOrdersByCustomer = asyncHandler(async (req, res, next) => {
 
   return AppResponse(res, 200, orders, `Orders for customer ${customerId} retrieved successfully.`);
 });
-

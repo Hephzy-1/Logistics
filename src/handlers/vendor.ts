@@ -347,11 +347,11 @@ export const updateAcceptedStatus = asyncHandler(async (req, res, next) => {
   const order = await Vendor.orderByIdAndVendor(orderId, vendorId);
 
   if (!order) {
-    return next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
+    throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
   }
 
   if (order.orderStatus !== 'new') {
-    return next(new ErrorResponse("Only new orders can be updated", 400));
+    throw next(new ErrorResponse("Only new orders can be updated", 400));
   }
 
   order.acceptedStatus = status === 'yes' ? 'accepted' : 'declined';
@@ -360,7 +360,7 @@ export const updateAcceptedStatus = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });
 
-export const updatePickupStatus = asyncHandler(async (req, res, next) => {
+export const updateAvailability = asyncHandler(async (req, res, next) => {
   const vendorId = req.vendor?._id as string;
 
   const { error, value } = orderStatus.validate(req.body);
@@ -374,15 +374,25 @@ export const updatePickupStatus = asyncHandler(async (req, res, next) => {
   const order = await Vendor.orderByIdAndVendor(orderId, vendorId);
 
   if (!order) {
-    return next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
+    throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
   }
 
   if (order.orderStatus !== 'new') {
-    return next(new ErrorResponse("Only new orders can be updated", 400));
+    throw next(new ErrorResponse("Only new orders can be updated", 400));
   }
 
   order.availableForPickup = status === 'yes' ? true : false;
   await order.save();
 
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);
+});
+
+export const getAllOrders = asyncHandler(async (req, res, next) => {
+  const orders = await Vendor.newOrders();
+
+  if (!orders || orders.length === 0) {
+    throw next(new ErrorResponse('No orders found', 404));
+  }
+
+  return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
 });

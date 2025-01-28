@@ -15,6 +15,7 @@ export interface IOrder extends Document {
   orderStatus: 'new' | 'in-transit' | 'delivered';
   acceptedStatus: 'accepted' | 'declined' | 'pending';
   deliveredStatus: boolean;
+  pickedUp: boolean;
 }
 
 const orderItemSchema = new Schema<IOrderItem>({
@@ -40,6 +41,7 @@ const orderSchema = new Schema<IOrder>({
     default: 'accepted',
   },
   deliveredStatus: { type: Boolean, default: false },
+  pickedUp: { type: Boolean, default: false },
 }, {
   timestamps: true,
   toJSON: { 

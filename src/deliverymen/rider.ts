@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, getAllOrders } from '../handlers/rider';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, getAllOrders, acceptPickup, updateDeliveredStatus } from '../handlers/rider';
 import passport from '../config/google';
 import { protect, isOwner } from '../middlewares';
 import upload from '../utils/multer';
@@ -21,5 +21,7 @@ route.use(protect);
 route.put('/update-password/:id', updatePassword);
 route.put('/update-profile', isOwner, upload.single('profilePic'));
 route.get('/get-orders', getAllOrders)
+route.put('/pickup', acceptPickup)
+route.put('/delivered', updateDeliveredStatus)
 
 export default route;

@@ -102,4 +102,8 @@ export class Vendor {
   static async orderByIdAndVendor (orderId: string, vendorId: string) {
     return await VendorRepository.getOrderByIdAndVendorId(orderId, vendorId)
   }
+  
+  static async newOrders () {
+    return await VendorRepository.getAllNewOrders()
+  }
 }
