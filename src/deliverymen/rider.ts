@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword } from '../handlers/rider';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, getAllOrders } from '../handlers/rider';
 import passport from '../config/google';
 import { protect, isOwner } from '../middlewares';
 import upload from '../utils/multer';
@@ -10,7 +10,7 @@ route.post('/register', register);
 route.post('/login', login);
 route.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], state: 'rider' }));
 route.route('/otp/:id')
-  .put(resendOTP) // resend otp
+  .put(resendOTP) 
   .post(verifyOTP);
 
 route.post('/forget-password', forgetPassword);
@@ -19,6 +19,7 @@ route.put('/reset/:resetToken', resetPassword);
 route.use(protect);
 
 route.put('/update-password/:id', updatePassword);
-route.put('/update-profile', isOwner, upload.single('profilePic'))
+route.put('/update-profile', isOwner, upload.single('profilePic'));
+route.get('/get-orders', getAllOrders)
 
 export default route;

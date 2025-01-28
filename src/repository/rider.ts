@@ -2,6 +2,7 @@ import Rider, { IRider } from "../models/rider";
 import { hashPassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import crypto from 'crypto';
+import Order from "../models/order";
 
 export class RiderRepository {
   static async createRider (values: IRider) {
@@ -74,4 +75,13 @@ export class RiderRepository {
 
     return rider;
   }
+
+  static async getAllOrders() {
+    const orders = await Order.find()
+      .populate('customerId', '_id name')
+      .populate('vendorId', '_id businessName')
+      .populate('items.menuItem', '_id name price');
+    return orders;
+  }
+  
 }

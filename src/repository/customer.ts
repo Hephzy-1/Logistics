@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import Cart, { ICart, ICartItem } from '../models/cart';
 import { ErrorResponse } from "../utils/errorResponse";
 import Order, { IOrder } from "../models/order";
+import mongoose from 'mongoose'; 
 
 export class CustomerRepository {
   static async createCustomer (values: ICustomer) {
@@ -99,42 +100,97 @@ export class CustomerRepository {
   }
 
   static async getCartsGroupedByVendor(customerId: string) {
-    const cart = await Cart.aggregate([
-      { $match: { customerId } },
-      { $unwind: "$items" },
+    const cartData = await Cart.aggregate([
+      {
+        $match: { customerId: new mongoose.Types.ObjectId(customerId) }
+      },
+      {
+        $unwind: "$items"
+      },
+      {
+        $lookup: {
+          from: "menus", // Ensure this matches your actual collection name
+          localField: "items.menuItem",
+          foreignField: "_id",
+          as: "menuItemDetails"
+        }
+      },
+      {
+        $unwind: "$menuItemDetails"
+      },
+      {
+        $addFields: {
+          "items.menuItem": {
+            _id: "$menuItemDetails._id",
+            price: "$menuItemDetails.price"
+          },
+          "items.price": {
+            $multiply: ["$items.quantity", "$menuItemDetails.price"]
+          }
+        }
+      },
       {
         $group: {
           _id: "$vendorId",
           items: { $push: "$items" },
-          totalPrice: { $first: "$totalPrice" },
+          totalPrice: { $sum: "$items.price" }
         }
       },
-      { $sort: { "_id": 1 } }
+      {
+        $project: {
+          _id: 0,
+          vendorId: { $arrayElemAt: ["$_id", 0] }, 
+          items: 1,
+          totalPrice: 1
+        }
+      }
     ]);
   
-    console.log(`Aggregated Cart: ${JSON.stringify(cart, null, 2)}`);
+    console.log(`Aggregated Cart Data: ${JSON.stringify(cartData, null, 2)}`);
   
-    cart.forEach((vendorCart: any) => {
-      console.log(`Vendor: ${vendorCart._id}, Total Price: ${vendorCart.totalPrice}`);
-    });
-  
-    return cart;
-  }    
-  
+    return cartData;
+  }  
+          
   static async getCustomerCart (customerId: string) {
     const cart = Cart.findOne({ customerId });
 
     return cart;
   }
 
-  static async createOrder (values: IOrder) {
+  static async createOrder(values: IOrder) {
+
+    if (!values.customerId) {
+      throw new ErrorResponse("CustomerID is required", 500);
+    }
+
+    if (!values.vendorId) {
+      throw new ErrorResponse("VendorID is required", 500);
+    }
+
+    if (!values.items || values.items.length === 0) {
+      throw new ErrorResponse("At least one item is required", 500);
+    }
 
     const order = await Order.create({
       customerId: values.customerId,
       vendorId: values.vendorId,
-      items: values.items
+      items: values.items,
+      totalPrice: values.totalPrice,
+      availableForPickup: values.availableForPickup ?? false,
+      orderStatus: values.orderStatus ?? 'new',
+      acceptedStatus: values.acceptedStatus ?? 'pending',
+      deliveredStatus: values.deliveredStatus ?? false
     });
 
     return order;
   }
+
+  static async getOrdersByCustomer(customerId: string) {
+    const orders = await Order.find({ customerId })
+      .populate('customerId', '_id name')
+      .populate('vendorId', '_id businessName')
+      .populate('items.menuItem', '_id name price');
+    return orders;
+  }
+  
 }

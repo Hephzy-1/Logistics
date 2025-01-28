@@ -5,6 +5,7 @@ import { generateToken } from "../utils/jwt";
 import crypto from 'crypto';
 import Menu, { IMenu } from '../models/menu';
 import { NextFunction } from "express";
+import Order from '../models/order';
 
 export class VendorRepository {
   static async createVendor(values: IVendor) {
@@ -193,5 +194,19 @@ export class VendorRepository {
     );
   
     return menu;
+  }
+
+  static async getOrdersByVendor(vendorId: string) {
+    const orders = await Order.find({ vendorId })
+      .populate('customerId', '_id name')
+      .populate('vendorId', '_id businessName')
+      .populate('items.menuItem', '_id name price');
+    return orders;
+  }  
+
+  static async getOrderByIdAndVendorId ( orderId: string, vendorId: string) {
+    const order = await Order.findOne({ _id: orderId, vendorId });
+
+    return order;
   }
 }

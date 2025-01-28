@@ -1,9 +1,9 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
-export interface IOrderItem {
-  menuItem: Types.ObjectId;
+interface IOrderItem {
+  menuItem: Types.ObjectId; 
   quantity: number;
-  totalPrice: number;
+  price: number;
 }
 
 export interface IOrder extends Document {
@@ -11,26 +11,46 @@ export interface IOrder extends Document {
   vendorId: Types.ObjectId;
   items: IOrderItem[];
   totalPrice: number;
-  status: string;
+  availableForPickup: boolean;
+  orderStatus: 'new' | 'in-transit' | 'delivered';
+  acceptedStatus: 'accepted' | 'declined' | 'pending';
+  deliveredStatus: boolean;
 }
 
-const OrderSchema = new Schema<IOrder>(
-  {
-    customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
-    items: [
-      {
-        menuItem: { type: Schema.Types.ObjectId, ref: 'Menu', required: true },
-        quantity: { type: Number, required: true },
-        totalPrice: { type: Number, required: true },
-      },
-    ],
-    totalPrice: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'completed', 'canceled'], default: 'pending' },
-  },
-  { timestamps: true }
-);
+const orderItemSchema = new Schema<IOrderItem>({
+  menuItem: { type: Schema.Types.ObjectId, ref: 'Menu', required: true },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+});
 
-const Order = mongoose.model<IOrder>('Order', OrderSchema);
+const orderSchema = new Schema<IOrder>({
+  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+  vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+  items: [orderItemSchema],
+  totalPrice: { type: Number, required: true },
+  availableForPickup: { type: Boolean, default: false },
+  orderStatus: { 
+    type: String, 
+    enum: ['new', 'in-transit', 'delivered'], 
+    default: 'new',
+  },
+  acceptedStatus: { 
+    type: String, 
+    enum: ['accepted', 'pending', 'declined'], 
+    default: 'accepted',
+  },
+  deliveredStatus: { type: Boolean, default: false },
+}, {
+  timestamps: true,
+  toJSON: { 
+    transform: function (doc, ret) {
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
+    }
+  }
+});
+
+const Order = model<IOrder>('Order', orderSchema);
 
 export default Order;

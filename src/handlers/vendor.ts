@@ -7,7 +7,7 @@ import { comparePassword, compareToken, hashToken } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
-import { profile, registerVendor, menus } from '../validators/vendor';
+import { profile, registerVendor, menus, orderStatus } from '../validators/vendor';
 import { uploadProfilePic } from './customer';
 import { AppResponse } from '../middlewares/appResponse';
 
@@ -303,4 +303,59 @@ export const newMenu = asyncHandler(async (req, res, next) => {
   const createdMenu = await Vendor.createNewMenu(req.body);
 
   return AppResponse(res, 201, createdMenu, "Menu created successfully");
+});
+
+export const updateMenu = asyncHandler(async (req, res, next) => {
+  req.body.vendorId = req.vendor?._id;
+
+  if (!req.body.vendorId) {
+    return next(new ErrorResponse('Vendor ID is required', 400));
+  }
+
+  const menu = await Vendor.menuById(req.params.menuId);
+  if (!menu) {
+    return next(new ErrorResponse('Menu not found', 404));
+  }
+
+  const updatedMenu = await Vendor.MenuUpdate(req.body);
+
+  return AppResponse(res, 200, updatedMenu, 'Menu updated successfully');
+});
+
+export const getOrdersByVendor = asyncHandler(async (req, res, next) => {
+  const vendorId = req.vendor?._id as string;
+  const orders = await Vendor.vendorOrders(vendorId);
+
+  if (!orders || orders.length === 0) {
+    throw next(new ErrorResponse('No orders found', 404));
+  }
+
+  return AppResponse(res, 200, orders, `Orders for vendor ${vendorId} retrieved successfully.`);
+});
+
+export const updateAcceptedStatus = asyncHandler(async (req, res, next) => {
+  const vendorId = req.vendor?._id as string;
+
+  const { error, value } = orderStatus.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+    
+  }
+  const { orderId, status } = value;
+
+  const order = await Vendor.orderByIdAndVendor(orderId, vendorId);
+
+  if (!order) {
+    return next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
+  }
+
+  if (order.orderStatus !== 'new') {
+    return next(new ErrorResponse("Only new orders can be updated", 400));
+  }
+
+  order.acceptedStatus = status === 'accepted' ? 'accepted' : 'declined';
+  await order.save();
+
+  return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });

@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart } from '../handlers/customer';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer } from '../handlers/customer';
 import passport from '../config/google';
 import env from '../config/env';
 import { isOwner, protect } from '../middlewares';
@@ -28,5 +28,6 @@ route.post('/cart', addItemToCart);
 route.get('/get-cart', cache, getCart);
 route.delete('/clear-cart', clearCart);
 route.post('/order', createOrderFromCart);
+route.get('/getOrder', getOrdersByCustomer);
 
 export default route;

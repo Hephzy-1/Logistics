@@ -51,4 +51,8 @@ export class Customer {
   static async createNewOrder (values: IOrder) {
     return await CustomerRepository.createOrder(values)
   }
+
+  static async customerOrders (customerId: string) {
+    return await CustomerRepository.getOrdersByCustomer(customerId)
+  }
 }

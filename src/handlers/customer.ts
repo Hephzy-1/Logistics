@@ -343,20 +343,29 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
   const { item, quantity } = value;
   value.customerId = req.customer?._id;
 
+  const vendorId = await Vendor.vendorIdFromMenu(item);
+  if (!vendorId) {
+    return next(new ErrorResponse("Vendor not found for the given menu item.", 404));
+  }
+
   let cart = await Customer.customerCart(value.customerId);
 
   if (cart) {
-    const existingItem = cart.items.find((i: any) => i.menuItem._id.toString() === item);
-    console.log(existingItem)
 
+    const existingItem = cart.items.find((i: any) => i.menuItem._id.toString() === item);
     if (existingItem) {
+      // Update quantity if item exists
       existingItem.quantity += quantity;
     } else {
+
       cart.items.push({ menuItem: item, quantity });
     }
 
-    cart = await cart.populate('items.menuItem', 'price');
+    if (!cart.vendorId.some((id: any) => id.toString() === vendorId.toString())) {
+      cart.vendorId.push(vendorId); 
+    }
 
+    cart = await cart.populate('items.menuItem', 'price');
     cart.totalPrice = cart.items.reduce((sum: number, currentItem: any) => {
       const itemTotalPrice = currentItem.menuItem.price * currentItem.quantity;
       return sum + itemTotalPrice;
@@ -364,18 +373,13 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
 
     cart = await cart.save();
   } else {
-    const vendorId = await Vendor.vendorIdFromMenu(item);
-
-    if (!vendorId) {
-      return next(new ErrorResponse("Vendor not found for the given menu item.", 404));
-    }
 
     const cartItems: any = {
       customerId: value.customerId,
-      vendorId,
+      vendorId: [vendorId], 
       items: [{ menuItem: item, quantity }],
-      totalPrice: item.price * quantity
-    }
+      totalPrice: item.price * quantity,
+    };
 
     cart = await Customer.createNewCart(cartItems);
   }
@@ -386,11 +390,24 @@ export const addItemToCart = asyncHandler(async (req, res, next) => {
 export const getCart = asyncHandler(async (req, res, next) => {
   const customerId = req.customer?._id as string;
 
-  const cart = await Customer.groupedCart(customerId);
+  const cartVendors = await Customer.groupedCart(customerId);
+  console.log(cartVendors);
 
-  if (!cart) throw next(new ErrorResponse('No item in cart', 400));
+  if (!cartVendors || cartVendors.length === 0) {
+    return next(new ErrorResponse('No items in cart', 400));
+  }
 
-  return AppResponse(res, 200, cart, 'Here is the retrieved cart')
+  const grandTotal = cartVendors.reduce(
+    (sum: number, vendor) => sum + vendor.totalPrice,
+    0
+  );
+
+  const responseData = {
+    vendors: cartVendors,
+    grandTotal
+  };
+
+  return AppResponse(res, 200, responseData, 'Here is the retrieved cart');
 });
 
 export const clearCart = asyncHandler(async (req, res, next) => {
@@ -412,29 +429,20 @@ export const clearCart = asyncHandler(async (req, res, next) => {
 export const createOrderFromCart = asyncHandler(async (req, res, next) => {
   const customerId = req.customer?._id as string;
 
-  let cartItems = await Customer.groupedCart(customerId);
-  if (!cartItems || cartItems.length === 0) {
+  const cartItemsGroupedByVendor = await Customer.groupedCart(customerId);
+
+  if (!cartItemsGroupedByVendor || cartItemsGroupedByVendor.length === 0) {
     return next(new ErrorResponse("Your cart is empty.", 400));
   }
-  
-  const groupedItems = cartItems.reduce((acc: any, cart: any) => {
-    const vendorId = cart._id.toString();
-    if (!acc[vendorId]) {
-      acc[vendorId] = [];
-    }
-    acc[vendorId].push(...cart.items);
-    return acc;
-  }, {});
 
   const orders = await Promise.all(
-    Object.keys(groupedItems).map(async (vendorId) => {
-      const items = groupedItems[vendorId];
-      const totalPrice = items.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+    cartItemsGroupedByVendor.map(async (vendorCart) => {
+      const { vendorId, items, totalPrice } = vendorCart;
 
       const orderItems = items.map((item: any) => ({
         menuItem: item.menuItem._id,
         quantity: item.quantity,
-        totalPrice: item.totalPrice, 
+        price: item.price 
       }));
 
       const order: any = {
@@ -450,9 +458,17 @@ export const createOrderFromCart = asyncHandler(async (req, res, next) => {
 
   await Customer.clearCart(customerId);
 
-  return AppResponse(res, 201, orders, "Orders created successfully."); 
+  return AppResponse(res, 201, orders, "Orders created successfully.");
 });
 
-export const getOrder = asyncHandler(async (req, res, next) => {
-  
-})
+export const getOrdersByCustomer = asyncHandler(async (req, res, next) => {
+  const customerId = req.customer?._id as string;
+  const orders = await Customer.customerOrders(customerId);
+
+  if (!orders || orders.length === 0) {
+    throw next(new ErrorResponse('No orders found', 404));
+  }
+
+  return AppResponse(res, 200, orders, `Orders for customer ${customerId} retrieved successfully.`);
+});
+

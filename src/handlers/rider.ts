@@ -339,4 +339,14 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     message: 'Profile updated successfully', 
     data: userProfile 
   });
-})
+});
+
+export const getAllOrders = asyncHandler(async (req, res, next) => {
+  const orders = await Rider.allOrders();
+
+  if (!orders || orders.length === 0) {
+    throw next(new ErrorResponse('No orders found', 404));
+  }
+
+  return AppResponse(res, 200, orders, "All orders retrieved successfully.");
+});

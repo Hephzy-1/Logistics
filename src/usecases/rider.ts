@@ -29,4 +29,8 @@ export class Rider {
   static async updateProfile (values: IRider) {
     return await RiderRepository.updateRiderProfile(values);
   }
+
+  static async allOrders () {
+    return await RiderRepository.getAllOrders()
+  }
 }

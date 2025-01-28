@@ -7,7 +7,7 @@ export interface ICartItem {
 
 export interface ICart extends Document {
   customerId: Types.ObjectId;
-  vendorId: Types.ObjectId;
+  vendorId: Types.ObjectId[];
   items: ICartItem[];
   totalPrice: number;
 }

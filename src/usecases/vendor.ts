@@ -90,4 +90,16 @@ export class Vendor {
   static async vendorIdFromMenu (menuId:string) {
     return await VendorRepository.getVendorIdFromMenu(menuId)
   }
+
+  static async MenuUpdate (values: IMenu) {
+    return await VendorRepository.updateMenu(values);
+  }
+
+  static async vendorOrders (vendorId: string) {
+    return await VendorRepository.getOrdersByVendor(vendorId)
+  }
+  
+  static async orderByIdAndVendor (orderId: string, vendorId: string) {
+    return await VendorRepository.getOrderByIdAndVendorId(orderId, vendorId)
+  }
 }

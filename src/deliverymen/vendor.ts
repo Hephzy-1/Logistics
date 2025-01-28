@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu } from '../handlers/vendor';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus } from '../handlers/vendor';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
@@ -23,13 +23,9 @@ route.use(protect);
 
 route.put('/update-password/:id', updatePassword);
 route.put('/update-profile', isOwner, upload.single('profilePic'), updateProfile);
-route.post('/test-upload', upload.single('picture'), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (!req.file) {
-    return next(new ErrorResponse("File is required", 400));
-  }
-  const url = await uploadProfilePic(req.file);
-  res.json({ message: 'File uploaded successfully', file: req.file, url });
-});
 route.post('/create-menu', newMenu);
+route.put('/update-menu', updateMenu)
+route.get('/getOrder', getOrdersByVendor);
+route.put('/update-orderStatus', updateAcceptedStatus)
 
 export default route;
