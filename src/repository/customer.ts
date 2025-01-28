@@ -6,6 +6,7 @@ import Cart, { ICart, ICartItem } from '../models/cart';
 import { ErrorResponse } from "../utils/errorResponse";
 import Order, { IOrder } from "../models/order";
 import mongoose from 'mongoose'; 
+import Wallet from "../models/wallet";
 
 export class CustomerRepository {
   static async createCustomer (values: ICustomer) {
@@ -194,4 +195,8 @@ export class CustomerRepository {
     return orders;
   }
   
+  static async getCustomerWallet (customerId: string) {
+    const customerWallet = await Wallet.findOne({ customerId });
+    return customerWallet
+  }
 }

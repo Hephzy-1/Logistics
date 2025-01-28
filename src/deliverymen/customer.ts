@@ -1,10 +1,8 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer } from '../handlers/customer';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, createWallet, addToWallet, payOrderAmountToVendor } from '../handlers/customer';
 import passport from '../config/google';
-import env from '../config/env';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
-import { ErrorResponse } from '../utils/errorResponse';
 import cache from '../middlewares/cache';
 
 export const route = express.Router();
@@ -24,10 +22,16 @@ route.put('/update-password', updatePassword);
 route.put('/update-profile/:id', isOwner, upload.single('profilePic'), updateProfile);
 route.get('/get-vendors', cache, getAllVerifiedVendors);
 route.get('/get-menus', cache, getAllVerifiedVendorsMenu);
-route.post('/cart', addItemToCart);
-route.get('/get-cart', cache, getCart);
-route.delete('/clear-cart', clearCart);
-route.post('/order', createOrderFromCart);
-route.get('/getOrder', getOrdersByCustomer);
+route.route('/cart')
+  .post(addItemToCart)
+  .get(cache, getCart)
+  .delete(clearCart);
+route.route('/order')
+  .post(createOrderFromCart)
+  .get(getOrdersByCustomer);
+route.route('/wallet')
+  .post(createWallet)
+  .put(addToWallet)
+route.post('/transaction', payOrderAmountToVendor)
 
 export default route;

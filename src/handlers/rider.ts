@@ -11,6 +11,7 @@ import { sendOTP, sendResetLink } from '../utils/sendEmail';
 import { uploadProfilePic } from './customer';
 import { profile, registerRider, orderStatus } from '../validators/rider';
 import { AppResponse } from '../middlewares/appResponse';
+import { Vendor } from '../usecases/vendor';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerRider.validate(req.body);
@@ -410,4 +411,21 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
   await order.save();
 
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);
+});
+
+export const createWallet = asyncHandler(async (req, res, next) => {
+  const riderId = req.rider?._id as string;
+
+  const existingWallet = await Rider.riderWallet(riderId);
+  if (existingWallet) {
+    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  }
+
+  const wallet: any = {
+    customerId: riderId
+  };
+
+  const newWallet = await Vendor.createNewWallet(wallet);
+
+  return AppResponse(res, 201, newWallet, 'New wallet has been created');
 });

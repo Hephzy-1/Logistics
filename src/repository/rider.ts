@@ -3,6 +3,7 @@ import { hashPassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import crypto from 'crypto';
 import Order from "../models/order";
+import Wallet from "../models/wallet";
 
 export class RiderRepository {
   static async createRider (values: IRider) {
@@ -88,5 +89,10 @@ export class RiderRepository {
     const order = await Order.findOne({ _id: orderId, vendorId });
 
     return order;
+  }
+
+  static async getRiderWallet (riderId: string) {
+    const riderWallet = await Wallet.findOne({ customerId: riderId });
+    return riderWallet;
   }
 }

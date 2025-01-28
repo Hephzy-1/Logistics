@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import Menu, { IMenu } from '../models/menu';
 import { NextFunction } from "express";
 import Order from '../models/order';
+import Wallet, { IWallet } from "../models/wallet";
 
 export class VendorRepository {
   static async createVendor(values: IVendor) {
@@ -214,5 +215,25 @@ export class VendorRepository {
     const order = await Order.find({ orderStatus: 'new' });
 
     return order;
+  }
+
+  static async getParticularOrder(orderId: string) {
+    const order = await Order.findById(orderId).populate('vendorId');
+
+    return order;
+  }
+
+  static async createWallet (values: IWallet) {
+    const newWallet = await Wallet.create({
+      customerId: values.customerId,
+      balance: 0
+    });
+
+    return newWallet;
+  }
+  static async getVendorWallet(vendorId: string) {
+    const vendorWallet = await Wallet.findOne({ customerId: vendorId });
+
+    return vendorWallet;
   }
 }

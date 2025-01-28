@@ -5,6 +5,7 @@ interface ITransaction {
   type: 'credit' | 'debit';
   date: Date;
   description?: string;
+  status: 'pending' | 'completed';
 }
 
 export interface IWallet extends Document {
@@ -18,6 +19,7 @@ const transactionSchema = new Schema<ITransaction>({
   type: { type: String, enum: ['credit', 'debit'], required: true },
   date: { type: Date, default: Date.now },
   description: { type: String },
+  status: { type: String, enum: ['pending', 'completed'], required: true }
 });
 
 const walletSchema = new Schema<IWallet>({

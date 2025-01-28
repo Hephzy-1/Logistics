@@ -55,4 +55,8 @@ export class Customer {
   static async customerOrders (customerId: string) {
     return await CustomerRepository.getOrdersByCustomer(customerId)
   }
+
+  static async customerWallet (customerId: string) {
+    return await CustomerRepository.getCustomerWallet(customerId)
+  }
 }

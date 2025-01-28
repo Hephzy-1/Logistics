@@ -396,3 +396,45 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
 
   return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
 });
+
+export const createWallet = asyncHandler(async (req, res, next) => {
+  const vendorId = req.vendor?._id as string;
+
+  const existingWallet = await Vendor.vendorWallet(vendorId);
+  if (existingWallet) {
+    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  }
+
+  const wallet: any = {
+    customerId: vendorId
+  };
+
+  const newWallet = await Vendor.createNewWallet(wallet);
+
+  return AppResponse(res, 201, newWallet, 'New wallet has been created');
+});
+
+// export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+//   const { amount } = req.body;
+
+//   const riderId = req.rider?._id as string
+
+//   const wallet = await Rider.customerWallet(customerId);
+
+//   if (!wallet) {
+//     return next(new ErrorResponse('Wallet not found.', 404));
+//   }
+
+//   wallet.balance += amount;
+//   wallet.transactions.push({
+//     amount: amount,
+//     type: 'credit',
+//     date: new Date(),
+//     description: 'Money added to wallet',
+//     status: 'completed'
+//   });
+
+//   await wallet.save();
+
+//   return AppResponse(res, 200, wallet, 'Money has been added to wallet');
+// });

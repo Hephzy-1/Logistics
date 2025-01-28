@@ -1,8 +1,9 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, getAllOrders, acceptPickup, updateDeliveredStatus } from '../handlers/rider';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, getAllOrders, acceptPickup, updateDeliveredStatus, createWallet } from '../handlers/rider';
 import passport from '../config/google';
 import { protect, isOwner } from '../middlewares';
 import upload from '../utils/multer';
+import { addToWallet } from '../handlers/customer';
 
 const route = express.Router();
 
@@ -23,5 +24,8 @@ route.put('/update-profile', isOwner, upload.single('profilePic'));
 route.get('/get-orders', getAllOrders)
 route.put('/pickup', acceptPickup)
 route.put('/delivered', updateDeliveredStatus)
+route.route('/wallet')
+  .post(createWallet)
+  .put(addToWallet)
 
 export default route;

@@ -1,6 +1,7 @@
 import { IVendor } from '../models/vendor';
 import { VendorRepository } from '../repository/vendor';
 import { IMenu } from '../models/menu';
+import { IWallet } from '../models/wallet';
 
 export class Vendor {
   static async create (vendor:IVendor) {
@@ -105,5 +106,16 @@ export class Vendor {
   
   static async newOrders () {
     return await VendorRepository.getAllNewOrders()
+  }
+  static async getOrder(orderId: string) {
+    return await VendorRepository.getParticularOrder(orderId)
+  }
+
+  static async createNewWallet (values: IWallet) {
+    return await VendorRepository.createWallet(values);  
+  }
+
+  static async vendorWallet (vendorId: string) {
+    return await VendorRepository.getVendorWallet(vendorId)
   }
 }
