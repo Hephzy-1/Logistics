@@ -354,7 +354,34 @@ export const updateAcceptedStatus = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Only new orders can be updated", 400));
   }
 
-  order.acceptedStatus = status === 'accepted' ? 'accepted' : 'declined';
+  order.acceptedStatus = status === 'yes' ? 'accepted' : 'declined';
+  await order.save();
+
+  return AppResponse(res, 200, order, `Order status updated to ${status}.`);
+});
+
+export const updatePickupStatus = asyncHandler(async (req, res, next) => {
+  const vendorId = req.vendor?._id as string;
+
+  const { error, value } = orderStatus.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+    
+  }
+  const { orderId, status } = value;
+
+  const order = await Vendor.orderByIdAndVendor(orderId, vendorId);
+
+  if (!order) {
+    return next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
+  }
+
+  if (order.orderStatus !== 'new') {
+    return next(new ErrorResponse("Only new orders can be updated", 400));
+  }
+
+  order.availableForPickup = status === 'yes' ? true : false;
   await order.save();
 
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);

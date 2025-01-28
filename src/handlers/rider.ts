@@ -9,7 +9,7 @@ import passport from '../config/google';
 import { NextFunction, Request, Response } from 'express';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
 import { uploadProfilePic } from './customer';
-import { profile, registerRider } from '../validators/rider';
+import { profile, registerRider, orderStatus } from '../validators/rider';
 import { AppResponse } from '../middlewares/appResponse';
 
 export const register = asyncHandler(async (req, res, next) => {
@@ -349,4 +349,31 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
   }
 
   return AppResponse(res, 200, orders, "All orders retrieved successfully.");
+});
+
+export const updatePickupStatus = asyncHandler(async (req, res, next) => {
+  const vendorId = req.vendor?._id as string;
+
+  const { error, value } = orderStatus.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+    
+  }
+  const { orderId, status } = value;
+
+  const order = await Rider.orderByIdAndVendor(orderId, vendorId);
+
+  if (!order) {
+    return next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
+  }
+
+  if (order.orderStatus !== 'new') {
+    return next(new ErrorResponse("Only new orders can be updated", 400));
+  }
+
+  order.deliveredStatus = status === 'true' ? true : false;
+  await order.save();
+
+  return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });

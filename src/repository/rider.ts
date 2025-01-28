@@ -84,4 +84,9 @@ export class RiderRepository {
     return orders;
   }
   
+  static async getOrderByIdAndVendorId ( orderId: string, vendorId: string) {
+    const order = await Order.findOne({ _id: orderId, vendorId });
+
+    return order;
+  }
 }

@@ -17,3 +17,8 @@ export const profile = Joi.object({
   vehicleNumber: Joi.string(),
   vehicleType: Joi.string()
 });
+
+export const orderStatus = Joi.object({
+  orderId: Joi.string().required(), 
+  status: Joi.string().valid('yes', 'no').required()
+})

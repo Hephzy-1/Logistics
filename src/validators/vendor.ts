@@ -29,5 +29,5 @@ export const menus = Joi.object({
 
 export const orderStatus = Joi.object({
   orderId: Joi.string().required(), 
-  status: Joi.string().valid('accepted', 'cancelled').required()
+  status: Joi.string().valid('yes', 'no').required()
 })
