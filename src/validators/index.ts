@@ -24,3 +24,7 @@ export const updatePass = Joi.object({
   newPassword: Joi.string().required(),
   confirmPassword: Joi.string().required()
 });
+
+export const addWallet = Joi.object({
+  amount: Joi.number().required()
+})

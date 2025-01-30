@@ -194,6 +194,12 @@ export class CustomerRepository {
       .populate('items.menuItem', '_id name price');
     return orders;
   }
+
+  static async getOrderByIdAndCustomerId ( orderId: string, customerId: string) {
+    const order = await Order.findOne({ _id: orderId, customerId });
+
+    return order;
+  }
   
   static async getCustomerWallet (customerId: string) {
     const customerWallet = await Wallet.findOne({ customerId });

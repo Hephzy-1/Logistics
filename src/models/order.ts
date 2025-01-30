@@ -9,6 +9,7 @@ interface IOrderItem {
 export interface IOrder extends Document {
   customerId: Types.ObjectId;
   vendorId: Types.ObjectId;
+  riderId?: Types.ObjectId;
   items: IOrderItem[];
   totalPrice: number;
   availableForPickup: boolean;
@@ -16,6 +17,8 @@ export interface IOrder extends Document {
   acceptedStatus: 'accepted' | 'declined' | 'pending';
   deliveredStatus: boolean;
   pickedUp: boolean;
+  confirmDeliverdByCustomer: boolean;
+  deliveryFee: number;
 }
 
 const orderItemSchema = new Schema<IOrderItem>({
@@ -27,6 +30,7 @@ const orderItemSchema = new Schema<IOrderItem>({
 const orderSchema = new Schema<IOrder>({
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
   vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+  riderId: { type: Schema.Types.ObjectId, ref: 'Rider' },
   items: [orderItemSchema],
   totalPrice: { type: Number, required: true },
   availableForPickup: { type: Boolean, default: false },
@@ -42,6 +46,8 @@ const orderSchema = new Schema<IOrder>({
   },
   deliveredStatus: { type: Boolean, default: false },
   pickedUp: { type: Boolean, default: false },
+  confirmDeliverdByCustomer: { type: Boolean, default: false },
+  deliveryFee: { type: Number, required: true}
 }, {
   timestamps: true,
   toJSON: { 

@@ -353,7 +353,7 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
 });
 
 export const acceptPickup = asyncHandler(async (req, res, next) => {
-  const vendorId = req.vendor?._id as string;
+  const riderId = req.rider?._id as string;
 
   const { error, value } = orderStatus.validate(req.body);
 
@@ -363,7 +363,7 @@ export const acceptPickup = asyncHandler(async (req, res, next) => {
   }
   const { orderId, status } = value;
 
-  const order = await Rider.orderByIdAndVendor(orderId, vendorId);
+  const order = await Rider.orderByIdAndRider(orderId, riderId);
 
   if (!order) {
     throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
@@ -387,7 +387,7 @@ export const acceptPickup = asyncHandler(async (req, res, next) => {
 });
 
 export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
-  const vendorId = req.vendor?._id as string;
+  const riderId = req.rider?._id as string;
 
   const { error, value } = orderStatus.validate(req.body);
 
@@ -397,14 +397,14 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
   }
   const { orderId, status } = value;
 
-  const order = await Rider.orderByIdAndVendor(orderId, vendorId);
+  const order = await Rider.orderByIdAndRider(orderId, riderId);
 
   if (!order) {
     throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
   }
 
-  if (order.orderStatus !== 'new') {
-    throw next(new ErrorResponse("Only new orders can be updated", 400));
+  if (order.orderStatus !== 'in-transit') {
+    throw next(new ErrorResponse("Only in transit orders can be updated", 400));
   }
 
   order.deliveredStatus = status === 'true' ? true : false;
@@ -414,18 +414,61 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
 });
 
 export const createWallet = asyncHandler(async (req, res, next) => {
-  const riderId = req.rider?._id as string;
+  const userId = req.rider?._id as string || req.customer?._id as string || req.vendor?._id as string;
 
-  const existingWallet = await Rider.riderWallet(riderId);
+  const existingWallet = await Rider.riderWallet(userId);
   if (existingWallet) {
     throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
   }
 
   const wallet: any = {
-    customerId: riderId
+    customerId: userId
   };
 
   const newWallet = await Vendor.createNewWallet(wallet);
 
   return AppResponse(res, 201, newWallet, 'New wallet has been created');
+});
+
+export const payAmountToRider = asyncHandler(async (req, res, next) => {
+  const riderId = req.rider?._id as string; 
+  const { orderId } = req.body;
+  const order = await Vendor.getOrder(riderId)
+  
+  if (!order || !order.riderId) {
+    throw next(new ErrorResponse('Order not found.', 404));
+  }
+
+  if (order.orderStatus !== 'delivered' || order.confirmDeliverdByCustomer !== true) {
+    throw next(new ErrorResponse('Order has not been delivered or confirmed by customer', 400));
+  }
+
+  const riderWallet = await Rider.riderWallet(String(order.riderId));
+  if (!riderWallet) {
+    throw next(new ErrorResponse('Vendor wallet not found.', 404));
+  }
+
+  const customerWallet = await Rider.riderWallet(riderId)
+
+  if (!customerWallet) {
+    throw next(new ErrorResponse('Customer Wallet not found', 404));
+  }
+
+  let orderTransaction = customerWallet.transactions.find(transaction => transaction.orderId === orderId);
+  if (!orderTransaction || orderTransaction.status !== 'pending') {
+    throw next(new ErrorResponse("Transaction hasn't been made", 400));
+  }
+
+  riderWallet.balance += order.deliveryFee;
+  riderWallet.transactions.push({
+    amount: order.deliveryFee,
+    type: 'credit',
+    date: new Date(),
+    description: `Payment for Order ID: ${orderId}`,
+    status: 'completed'
+  });
+
+  await riderWallet.save();
+
+  return AppResponse(res, 200, customerWallet , 'Payment has been made');
 });

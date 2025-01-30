@@ -34,8 +34,8 @@ export class Rider {
     return await RiderRepository.getAllOrders()
   }
 
-  static async orderByIdAndVendor (orderId: string, vendorId: string) {
-    return await RiderRepository.getOrderByIdAndVendorId(orderId, vendorId)
+  static async orderByIdAndRider (orderId: string, riderId: string) {
+    return await RiderRepository.getOrderByIdAndRiderId(orderId, riderId)
   }
 
   static async riderWallet (riderId: string) {

@@ -4,7 +4,7 @@ import { Customer } from "../usecases/customer";
 import { ErrorResponse } from "../utils/errorResponse";
 import { comparePassword, compareToken, hashToken } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
-import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from "../validators";
+import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput, addWallet } from "../validators";
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
 import cloudinary from "../utils/cloudinary";
@@ -12,6 +12,7 @@ import { profile, registerCustomer, addCart, removeCart } from "../validators/cu
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 import { Rider } from "../usecases/rider";
+import { orderStatus } from "../validators/vendor";
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerCustomer.validate(req.body);
@@ -509,25 +510,39 @@ export const getOrdersByCustomer = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, orders, `Orders for customer ${customerId} retrieved successfully.`);
 });
 
-export const createWallet = asyncHandler(async (req, res, next) => {
-  const customerId = req.vendor?._id as string;
+export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
+  const customerId = req.customer?._id as string;
 
-  const existingWallet = await Customer.customerWallet(customerId);
-  if (existingWallet) {
-    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  const { error, value } = orderStatus.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+    
+  }
+  const { orderId, status } = value;
+
+  const order = await Customer.orderByIdAndCustomer(orderId, customerId);
+
+  if (!order) {
+    throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
   }
 
-  const wallet: any = {
-    customerId
-  };
+  if (order.orderStatus !== 'delivered') {
+    throw next(new ErrorResponse("Only delivered orders can be updated", 400));
+  }
 
-  const newWallet = await Vendor.createNewWallet(wallet);
+  order.confirmDeliverdByCustomer = status === 'true' ? true : false;
+  await order.save();
 
-  return AppResponse(res, 201, newWallet, 'New wallet has been created');
+  return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });
 
-export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { amount } = req.body;
+export const addToWallet = asyncHandler(async (req, res, next) => {
+  const { error, value } = addWallet.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400))
+  }
 
   const userId = req.customer?.id || req.rider?.id || req.vendor?.id
 
@@ -537,6 +552,7 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
     return next(new ErrorResponse('Wallet not found.', 404));
   }
 
+  const amount = Number(value)
   wallet.balance += amount;
   wallet.transactions.push({
     amount: amount,
@@ -597,5 +613,43 @@ export const payOrderAmountToVendor = asyncHandler(async (req, res, next) => {
 
   await vendorWallet.save();
 
-  return AppResponse(res, 200, { customerWallet, vendorWallet }, 'Paymwnt has been made');
+  return AppResponse(res, 200, { customerWallet, vendorWallet }, 'Payment has been made');
+});
+
+export const payOrderAmountToRider = asyncHandler(async (req, res, next) => {
+  const customerId = req.customer?._id as string; 
+  const { orderId } = req.body;
+  const order = await Vendor.getOrder(orderId)
+  
+  if (!order || !order.riderId) {
+    throw next(new ErrorResponse('Order not found.', 404));
+  }
+
+  const riderWallet = await Rider.riderWallet(String(order.riderId));
+  if (!riderWallet) {
+    throw next(new ErrorResponse('Vendor wallet not found.', 404));
+  }
+
+  const customerWallet = await Customer.customerWallet(customerId)
+
+  if (!customerWallet) {
+    throw next(new ErrorResponse('Customer Wallet not found', 404));
+  }
+
+  if (customerWallet.balance < order.deliveryFee) {
+    throw next(new ErrorResponse('Insufficient balance', 400));
+  }
+
+  customerWallet.balance -= order.deliveryFee;
+  customerWallet.transactions.push({
+    amount: order.deliveryFee,
+    type: 'debit',
+    date: new Date(),
+    description: `Payment for Order ID: ${orderId}`,
+    status: 'pending'
+  });
+
+  await customerWallet.save();
+
+  return AppResponse(res, 200, customerWallet , 'Payment has been made');
 });
