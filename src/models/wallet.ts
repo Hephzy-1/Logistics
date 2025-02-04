@@ -8,7 +8,7 @@ interface ITransaction {
   status: 'pending' | 'completed';
   orderId?: Types.ObjectId;
 }
-
+ 
 export interface IWallet extends Document {
   customerId: Types.ObjectId;
   balance: number;
@@ -21,7 +21,7 @@ const transactionSchema = new Schema<ITransaction>({
   date: { type: Date, default: Date.now },
   description: { type: String },
   status: { type: String, enum: ['pending', 'completed'], required: true },
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order' }
+  orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
 });
 
 const walletSchema = new Schema<IWallet>({

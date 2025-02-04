@@ -1,9 +1,10 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, createWallet, addToWallet, payOrderAmountToVendor } from '../handlers/customer';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, addToWallet, payOrderAmountToVendor } from '../handlers/customer';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
 import cache from '../middlewares/cache';
+import { createWallet } from '../handlers/rider';
 
 export const route = express.Router();
 

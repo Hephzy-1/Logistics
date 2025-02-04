@@ -85,17 +85,13 @@ export class RiderRepository {
     return orders;
   }
   
-  static async static async getOrderByIdAndRiderId ( orderId: string, riderId: string) {
+  static async getOrderByIdAndRiderId ( orderId: string, riderId: string) {
     const order = await Order.findOne({ _id: orderId, riderId });
 
     return order;
-  } ( orderId: string, riderId: string) {
-    const order = await Order.findOne({ _id: orderId, riderId });
+  } 
 
-    return order;
-  }
-
-  static async getRiderWallet (riderId: string) {
+  static async getRiderWallet(riderId: string) {
     const riderWallet = await Wallet.findOne({ customerId: riderId });
     return riderWallet;
   }

@@ -13,6 +13,7 @@ import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 import { Rider } from "../usecases/rider";
 import { orderStatus } from "../validators/vendor";
+import { initializePayment, verifyPayment } from "../utils/payment";
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerCustomer.validate(req.body);
@@ -537,14 +538,20 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });
 
-export const addToWallet = asyncHandler(async (req, res, next) => {
+export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = addWallet.validate(req.body);
 
   if (error) {
-    throw next(new ErrorResponse(error.details[0].message, 400))
+    throw next(new ErrorResponse(error.details[0].message, 400));
   }
 
-  const userId = req.customer?.id || req.rider?.id || req.vendor?.id
+  const { amount } = value;
+  const user = req.customer || req.rider || req.vendor;
+
+  if (!user) {
+    throw next(new ErrorResponse('User not found', 404));
+  }
+  const userId = user.id;
 
   const wallet = await Customer.customerWallet(userId) || await Vendor.vendorWallet(userId) || await Rider.riderWallet(userId);
 
@@ -552,19 +559,70 @@ export const addToWallet = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Wallet not found.', 404));
   }
 
-  const amount = Number(value)
-  wallet.balance += amount;
-  wallet.transactions.push({
-    amount: amount,
-    type: 'credit',
-    date: new Date(),
-    description: 'Money added to wallet',
-    status: 'completed'
-  });
+  const money = Number(amount);
 
-  await wallet.save();
+  const paymentData: any = {
+    email: user.email,
+    amount: money,
+  }
+  console.log(paymentData);
 
-  return AppResponse(res, 200, wallet, 'Money has been added to wallet');
+  try {
+    
+    const paymentResponse = await initializePayment(paymentData);
+
+    wallet.transactions.push({
+      amount: amount,
+      type: 'credit',
+      date: new Date(),
+      description: paymentResponse.data.reference,
+      status: 'pending',
+    });
+
+    await wallet.save();
+
+    return AppResponse(res, 200, paymentResponse.data, 'Transaction initialized');
+  } catch (err: any) {
+    return next(new ErrorResponse(err.message, 500));
+  }
+});
+
+export const verifyAddToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.customer?.id || req.rider?.id || req.vendor?.id;
+
+  const wallet = await Customer.customerWallet(userId) || await Vendor.vendorWallet(userId) || await Rider.riderWallet(userId);
+
+  if (!wallet) {
+    return next(new ErrorResponse('Wallet not found.', 404));
+  }
+
+  const { reference } = req.body;  
+
+  try {
+    
+    const paymentResponse = await verifyPayment(reference);
+
+    if (paymentResponse.data.status !== 'success') {
+      return next(new ErrorResponse('Transaction verification failed', 400));
+    }
+
+    const amount = paymentResponse.data.amount;
+    wallet.balance += amount;
+
+    wallet.transactions.push({
+      amount: amount,
+      type: 'credit',
+      date: new Date(),
+      description: paymentResponse.data.reference,
+      status: 'completed',
+    });
+
+    await wallet.save();
+
+    return AppResponse(res, 200, wallet, 'Transaction verified and wallet updated');
+  } catch (err: any) {
+    return next(new ErrorResponse(err.message, 500));
+  }
 });
 
 export const payOrderAmountToVendor = asyncHandler(async (req, res, next) => {

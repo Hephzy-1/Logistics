@@ -1,11 +1,12 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus, updateAvailability, createWallet } from '../handlers/vendor';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus, updateAvailability } from '../handlers/vendor';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
-import { addToWallet, uploadProfilePic } from '../handlers/customer';
+import { addToWallet, uploadProfilePic, verifyAddToWallet } from '../handlers/customer';
 import { ErrorResponse } from '../utils/errorResponse';
 import cache from '../middlewares/cache';
+import { createWallet } from '../handlers/rider';
 
 const route = express.Router();
 
@@ -25,11 +26,13 @@ route.put('/update-password/:id', updatePassword);
 route.put('/update-profile', isOwner, upload.single('profilePic'), updateProfile);
 route.post('/create-menu', newMenu);
 route.put('/update-menu', updateMenu)
-route.get('/getOrder', getOrdersByVendor);
+route.get('/getOrder', cache, getOrdersByVendor);
 route.put('/update-orderStatus', updateAcceptedStatus)
 route.put('/available-order', updateAvailability)
 route.route('/wallet')
   .post(createWallet)
-  .put(addToWallet)
+  .put(addToWallet);
+route.route('/transactions')
+  .put(verifyAddToWallet)
 
 export default route;
