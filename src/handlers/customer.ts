@@ -563,7 +563,7 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
 
   const paymentData: any = {
     email: user.email,
-    amount: money,
+    amount: money * 100,
   }
   console.log(paymentData);
 
@@ -601,21 +601,23 @@ export const verifyAddToWallet = asyncHandler(async (req: Request, res: Response
   try {
     
     const paymentResponse = await verifyPayment(reference);
+    console.log(paymentResponse);
 
     if (paymentResponse.data.status !== 'success') {
       return next(new ErrorResponse('Transaction verification failed', 400));
     }
 
     const amount = paymentResponse.data.amount;
-    wallet.balance += amount;
 
-    wallet.transactions.push({
-      amount: amount,
-      type: 'credit',
-      date: new Date(),
-      description: paymentResponse.data.reference,
-      status: 'completed',
-    });
+    const transaction = wallet.transactions.find(tx => tx.description === reference);
+
+    if (!transaction) {
+      return next(new ErrorResponse('Transaction not found.', 404));
+    }
+
+    transaction.status = 'completed';
+    transaction.amount = amount;
+    wallet.balance += amount;
 
     await wallet.save();
 
