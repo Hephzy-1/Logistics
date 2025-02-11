@@ -205,4 +205,9 @@ export class CustomerRepository {
     const customerWallet = await Wallet.findOne({ customerId });
     return customerWallet
   }
+  
+  static async getCustomerWalletByReference (reference: string) {
+    const customerWallet = await Wallet.findOne({ reference });
+    return customerWallet
+  }
 }

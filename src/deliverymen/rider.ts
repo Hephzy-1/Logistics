@@ -3,7 +3,7 @@ import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, u
 import passport from '../config/google';
 import { protect, isOwner } from '../middlewares';
 import upload from '../utils/multer';
-import { addToWallet } from '../handlers/customer';
+import { paystackWebhookHandler } from '../handlers/customer';
 
 const route = express.Router();
 
@@ -26,6 +26,6 @@ route.put('/pickup', acceptPickup)
 route.put('/delivered', updateDeliveredStatus)
 route.route('/wallet')
   .post(createWallet)
-  .put(addToWallet)
+  .put(paystackWebhookHandler)
 
 export default route;

@@ -95,4 +95,9 @@ export class RiderRepository {
     const riderWallet = await Wallet.findOne({ customerId: riderId });
     return riderWallet;
   }
+
+  static async getRiderWalletByReference(reference: string) {
+    const riderWallet = await Wallet.findOne({ reference });
+    return riderWallet;
+  }
 }

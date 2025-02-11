@@ -39,6 +39,10 @@ export class Rider {
   }
 
   static async riderWallet (riderId: string) {
-      return await RiderRepository.getRiderWallet(riderId)
-    }
+    return await RiderRepository.getRiderWallet(riderId)
+  }
+
+  static async riderWalletByReference (reference: string) {
+    return await RiderRepository.getRiderWalletByReference(reference)
+  }
 }

@@ -3,7 +3,8 @@ import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, u
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
-import { addToWallet, uploadProfilePic, verifyAddToWallet } from '../handlers/customer';
+import multer from 'multer';
+import { paystackWebhookHandler } from '../handlers/customer';
 import { ErrorResponse } from '../utils/errorResponse';
 import cache from '../middlewares/cache';
 import { createWallet } from '../handlers/rider';
@@ -23,7 +24,18 @@ route.put('/reset/:token', resetPassword);
 route.use(protect);
 
 route.put('/update-password/:id', updatePassword);
-route.put('/update-profile', isOwner, upload.single('profilePic'), updateProfile);
+route.put('/update-profile/:id', 
+  upload.single('profilePic'),
+  (err: any, req: express.Request, res: express.Response, next:express.NextFunction) => {
+    if (err) {
+      // Multer or other middleware error handling
+      console.error('File upload error:', err);
+      return next(new ErrorResponse(err.message, 400));  
+    }
+    next();
+  },
+  updateProfile
+);
 route.post('/create-menu', newMenu);
 route.put('/update-menu', updateMenu)
 route.get('/getOrder', cache, getOrdersByVendor);
@@ -31,8 +43,8 @@ route.put('/update-orderStatus', updateAcceptedStatus)
 route.put('/available-order', updateAvailability)
 route.route('/wallet')
   .post(createWallet)
-  .put(addToWallet);
-route.route('/transactions')
-  .put(verifyAddToWallet)
+  .put(paystackWebhookHandler);
+// route.route('/transactions')
+//   .put(verifyAddToWallet)
 
 export default route;

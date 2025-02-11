@@ -8,10 +8,10 @@ import crypto from 'crypto';
 import passport from '../config/google';
 import { NextFunction, Request, Response } from 'express';
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
-import { uploadProfilePic } from './customer';
 import { profile, registerRider, orderStatus } from '../validators/rider';
 import { AppResponse } from '../middlewares/appResponse';
 import { Vendor } from '../usecases/vendor';
+import { uploadImageToCloudinary, validateImage } from '../utils/cloudinary';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerRider.validate(req.body);
@@ -330,8 +330,14 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   }
 
   if (req.file) {
-    req.body.profilePic = await uploadProfilePic(req.file);
-  }
+  
+      if (!validateImage(req.file)) {
+        throw next(new ErrorResponse('Invalid image type', 400));
+      }
+      
+      const imageUrl = await uploadImageToCloudinary(req.file)
+      req.body.profilePic = imageUrl
+    }
 
   const userProfile = await Rider.updateProfile(req.body);
 

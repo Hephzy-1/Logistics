@@ -7,13 +7,15 @@ import { generateToken } from "../utils/jwt";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput, addWallet } from "../validators";
 import crypto from 'crypto';
 import { sendOTP, sendResetLink } from "../utils/sendEmail";
-import cloudinary from "../utils/cloudinary";
+import { uploadImageToCloudinary, validateImage } from "../utils/cloudinary";
 import { profile, registerCustomer, addCart, removeCart } from "../validators/customer";
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 import { Rider } from "../usecases/rider";
 import { orderStatus } from "../validators/vendor";
-import { initializePayment, verifyPayment } from "../utils/payment";
+import { initializePayment, } from '../utils/payment';
+import environment from "../config/env";
+
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerCustomer.validate(req.body);
@@ -254,28 +256,6 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, null, 'Password has been updated');
 });
 
-export const uploadProfilePic = (file: Express.Multer.File): Promise<string> => {
-  console.log('Uploading file to Cloudinary...');
-  console.log('File buffer:', file.buffer);
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: 'image' },
-      (error, result) => {
-        if (error) {
-          console.error('Cloudinary Error:', error);
-          reject(new ErrorResponse('Image upload failed', 500));
-        } else {
-          console.log('Cloudinary Upload Result:', result);
-          resolve(result?.secure_url || '');
-        }
-      }
-    );
-    uploadStream.end(file.buffer);
-  });
-};
-
-
 export const updateProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   req.body.userId = req.customer?._id;
 
@@ -283,16 +263,21 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response, ne
     return next(new ErrorResponse('User ID is required', 400));
   }
 
-  // Check if user exists
   const user = await Customer.customerById(req.body.userId);
   if (!user) {
     return next(new ErrorResponse('User not found', 404));
   }
 
   if (req.file) {
-    req.body.profilePic = await uploadProfilePic(req.file);
-  }
 
+    if (!validateImage(req.file)) {
+      throw next(new ErrorResponse('Invalid image type', 400));
+    }
+    
+    const imageUrl = await uploadImageToCloudinary(req.file)
+    req.body.profilePic = imageUrl
+  }
+  
   const userProfile = await Customer.updateProfile(req.body);
 
   return AppResponse(res, 203, userProfile, 'Profile updated successfully');
@@ -561,15 +546,9 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
 
   const money = Number(amount);
 
-  const paymentData: any = {
-    email: user.email,
-    amount: money * 100,
-  }
-  console.log(paymentData);
-
   try {
     
-    const paymentResponse = await initializePayment(paymentData);
+    const paymentResponse = await initializePayment(user.email, money);
 
     wallet.transactions.push({
       amount: amount,
@@ -587,44 +566,52 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
   }
 });
 
-export const verifyAddToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.customer?.id || req.rider?.id || req.vendor?.id;
+export const paystackWebhookHandler = asyncHandler(async (req, res, next) => {
+  // Verify the request signature
+  if (!environment.PAYSTACK_SECRET) throw next(new ErrorResponse('Paystack secret is required', 500))
 
-  const wallet = await Customer.customerWallet(userId) || await Vendor.vendorWallet(userId) || await Rider.riderWallet(userId);
+  // if (!verifyPaystackSignature(req, environment.PAYSTACK_SECRET)) {
+  //   console.error('Invalid Paystack signature');
+  //   return res.status(401).send('Invalid signature');
+  // }
 
-  if (!wallet) {
-    return next(new ErrorResponse('Wallet not found.', 404));
-  }
+  // Extract the event object from the webhook payload
+  const event = req.body;
 
-  const { reference } = req.body;  
+  // Process different event types
+  switch (event.event) {
+    case 'charge.success': {
+      console.log('Charge successful event received:', event.data);
+      const reference: string = event.data.reference;
+      const amount: number = event.data.amount; 
 
-  try {
-    
-    const paymentResponse = await verifyPayment(reference);
-    console.log(paymentResponse);
+      // const wallet = await findWalletByTransactionReference(reference);
+      // if (!wallet) {
+      //   console.error('Wallet not found for reference:', reference);
+      //   break; 
+      // }
 
-    if (paymentResponse.data.status !== 'success') {
-      return next(new ErrorResponse('Transaction verification failed', 400));
+      // const transaction = wallet.transactions.find((tx: any) => tx.reference === reference);
+      // if (!transaction) {
+      //   console.error('Transaction not found for reference:', reference);
+      //   break;
+      // }
+
+      // transaction.status = 'completed';
+      // transaction.amount = amount;
+      // wallet.balance += amount; 
+
+      // await wallet.save();
+      // console.log(`Wallet updated for transaction ${reference}`);
+      // break;
     }
 
-    const amount = paymentResponse.data.amount;
-
-    const transaction = wallet.transactions.find(tx => tx.description === reference);
-
-    if (!transaction) {
-      return next(new ErrorResponse('Transaction not found.', 404));
-    }
-
-    transaction.status = 'completed';
-    transaction.amount = amount;
-    wallet.balance += amount;
-
-    await wallet.save();
-
-    return AppResponse(res, 200, wallet, 'Transaction verified and wallet updated');
-  } catch (err: any) {
-    return next(new ErrorResponse(err.message, 500));
+    default:
+      console.log('Unhandled event type:', event.event);
+      break;
   }
+
+  return AppResponse(res, 200, null, 'Payment successful');
 });
 
 export const payOrderAmountToVendor = asyncHandler(async (req, res, next) => {

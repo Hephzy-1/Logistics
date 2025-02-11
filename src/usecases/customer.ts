@@ -63,4 +63,8 @@ export class Customer {
   static async customerWallet (customerId: string) {
     return await CustomerRepository.getCustomerWallet(customerId)
   }
+
+  static async customerWalletByReference (reference: string) {
+    return await CustomerRepository.getCustomerWalletByReference(reference)
+  }
 }

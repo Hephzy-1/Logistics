@@ -231,8 +231,15 @@ export class VendorRepository {
 
     return newWallet;
   }
+
   static async getVendorWallet(vendorId: string) {
     const vendorWallet = await Wallet.findOne({ customerId: vendorId });
+
+    return vendorWallet;
+  }
+
+  static async getVendorWalletByReference(reference: string) {
+    const vendorWallet = await Wallet.findOne({ reference });
 
     return vendorWallet;
   }

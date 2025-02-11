@@ -118,4 +118,8 @@ export class Vendor {
   static async vendorWallet (vendorId: string) {
     return await VendorRepository.getVendorWallet(vendorId)
   }
+
+  static async vendorWalletByReference (reference: string) {
+    return await VendorRepository.getVendorWalletByReference(reference)
+  }
 }

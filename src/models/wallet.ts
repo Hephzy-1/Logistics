@@ -7,6 +7,7 @@ interface ITransaction {
   description?: string;
   status: 'pending' | 'completed';
   orderId?: Types.ObjectId;
+  reference?: string;
 }
  
 export interface IWallet extends Document {
@@ -22,6 +23,7 @@ const transactionSchema = new Schema<ITransaction>({
   description: { type: String },
   status: { type: String, enum: ['pending', 'completed'], required: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
+  reference: { type: String },
 });
 
 const walletSchema = new Schema<IWallet>({

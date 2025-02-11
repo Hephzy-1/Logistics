@@ -8,8 +8,8 @@ import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
 import { sendOTP, sendResetLink } from '../utils/sendEmail';
 import { profile, registerVendor, menus, orderStatus } from '../validators/vendor';
-import { uploadProfilePic } from './customer';
 import { AppResponse } from '../middlewares/appResponse';
+import { uploadImageToCloudinary, validateImage } from '../utils/cloudinary';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerVendor.validate(req.body);
@@ -254,35 +254,35 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 });
 
 export const updateProfile = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  
-  const { error, value } = profile.validate(req.body);
+  const userId = req.params.id;
 
-  if (error) {
-    throw next(new ErrorResponse(error.details[0].message, 400));
+  if (!userId) {
+    return next(new ErrorResponse('User ID is required', 400));
   }
 
-  req.body.userId = req.vendor?._id;
-
-  if (!req.body.userId) {
-    next (new ErrorResponse('User ID is required', 400));
-  }
- 
   // Check if user exists
-  const user = await Vendor.vendorById(req.body.userId);
+  const user = await Vendor.vendorById(userId);
   if (!user) {
-    next (new ErrorResponse('User not found', 404));
+    return next(new ErrorResponse('User not found', 404));
   }
 
   if (req.file) {
-    req.body.profilePic = await uploadProfilePic(req.file);
+    if (!validateImage(req.file)) {
+      return next(new ErrorResponse('Invalid image type', 400));
+    }
+
+    const imageUrl = await uploadImageToCloudinary(req.file);
+    req.body.profilePic = imageUrl;
   }
+
+  req.body.userId = userId;
 
   const userProfile = await Vendor.updateProfile(req.body);
 
-  return res.status(204).json({ 
-    success: true, 
-    message: 'Profile updated successfully', 
-    data: userProfile 
+  return res.status(204).json({
+    success: true,
+    message: 'Profile updated successfully',
+    data: userProfile,
   });
 });
 
