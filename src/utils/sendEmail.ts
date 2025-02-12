@@ -20,7 +20,7 @@ export const sendOTP = async (otp:string, email:string) => {
     text: `Your OTP is: ${otp}`
   };
 
-  transporter.sendMail(mailOptions, (error: Error | null, info: any) => {
+  transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error(error);
       throw new ErrorResponse('Email not sent', 500);
@@ -45,7 +45,7 @@ export const sendResetLink = async (token: string, email: string, role:string) =
     ` 
   };
 
-  transporter.sendMail(mailOptions, (error: Error | null, info: any) => {
+  transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error(error);
       throw new ErrorResponse('Email not sent', 500);
