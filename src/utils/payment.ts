@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import environment from '../config/env';
 import { ErrorResponse } from './errorResponse';
 import axios from 'axios';
+import { AppResponse } from '../middlewares/appResponse';
 
 const PAYSTACK_SECRET_KEY = environment.PAYSTACK_SECRET;
 
@@ -39,36 +40,33 @@ export const initializePayment = async (
   return response.data;
 };
 
-const verifyPaystackWebhook = (req: Request, res: Response, next: NextFunction) => {
+const verifyPaystackWebhook = (eventData: any, signature: string) => {
   const hash = crypto
     .createHmac('sha512', PAYSTACK_SECRET_KEY)
-    .update(JSON.stringify(req.body))
+    .update(JSON.stringify(eventData))
     .digest('hex');
 
-  if (hash === req.headers['x-paystack-signature']) {
-    next();
-  } else {
-    res.status(400).send('Invalid signature');
-  }
+  return hash === signature;
 };
 
-const webhook = async (req: Request, res: Response) => {
+export const webhook = async (req: Request, res: Response) => {
   const event = req.body;
+  const signature = req.headers['x-paystack-signature'];
+
+  if (!verifyPaystackWebhook(event, signature as string)) {
+    throw new ErrorResponse('Webhook signature verification failed', 400);
+  }
   
   switch (event.event) {
     case 'charge.success':
       const transactionRef = event.data.reference;
       const paymentStatus = event.data.status;
+      const transactionId = event.data.id;
 
-      // Handle the event (e.g., verify the transaction, update the database)
-      // Example: await verifyTransaction(transactionRef);
-
-      // Respond to Paystack to acknowledge receipt of the event
-      res.status(200).send('Event received');
-      break;
-
+      
+      AppResponse(res, 200, { transactionId, transactionRef, paymentStatus }, 'Payment successful');
     default:
-      res.status(200).send('Event not handled');
+      new ErrorResponse('Event not handled', 400);
       break;
   }
 };

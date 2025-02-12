@@ -12,6 +12,7 @@ import vendorRoute from './deliverymen/vendor';
 import riderRoute from './deliverymen/rider';
 import { oAuth } from "./handlers/rider";
 import upload from "./utils/multer";
+import { webhook } from "./utils/payment";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.get('/', asyncHandler(async (req: Request, res: Response) => {
   return AppResponse(res, 200, null, 'Welcome');
 }));
 
+app.post('/paystack/webhook', webhook)
 app.use('/api/v1/customer', customerRoute);
 app.use('/api/v1/vendor', vendorRoute);
 app.use('/api/v1/rider', riderRoute);
