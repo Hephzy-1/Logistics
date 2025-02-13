@@ -249,7 +249,8 @@ export class VendorRepository {
       vendorId: values.vendorId,
       amount: values.amount,
       reference: values.reference,
-      status: values.status
+      status: values.status,
+      type: values.type
     });
 
     return transaction;

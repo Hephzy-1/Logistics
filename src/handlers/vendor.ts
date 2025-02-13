@@ -398,7 +398,6 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
 });
 
-
 export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = addWallet.validate(req.body);
 
@@ -419,16 +418,16 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       type: 'credit',
       date: new Date(),
       status: 'pending',
-      [`VendorId`]: user.id
+      vendorId: user.id
     }
+
     const pendingTransaction = await Vendor.createNewTransaction(dataValues);
 
-    // Initialize payment
     const paymentResponse = await initializePayment(
       user.email,
       amount,
       user.id,
-      'customer'
+      'vendor'
     );
 
     // Update transaction with payment reference
