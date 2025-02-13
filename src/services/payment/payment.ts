@@ -96,6 +96,8 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
   const rawBody = (req as any).rawBody; 
   const signature = req.headers['x-paystack-signature'];
 
+  console.log(rawBody, signature);
+
   if (!verifyPaystackWebhook(rawBody, signature as string)) {
     throw new ErrorResponse('Webhook signature verification failed', 400);
   }
