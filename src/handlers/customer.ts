@@ -6,14 +6,14 @@ import { comparePassword, compareToken, hashToken } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput, addWallet } from "../validators";
 import crypto from 'crypto';
-import { sendOTP, sendResetLink } from "../utils/sendEmail";
+import { sendOTP, sendResetLink } from "../services/email/sendEmail";
 import { uploadImageToCloudinary, validateImage } from "../utils/cloudinary";
 import { profile, registerCustomer, addCart, removeCart } from "../validators/customer";
 import { Vendor } from "../usecases/vendor";
 import { AppResponse } from "../middlewares/appResponse";
 import { Rider } from "../usecases/rider";
 import { orderStatus } from "../validators/vendor";
-import { initializePayment, } from '../utils/payment';
+import { initializePayment, } from '../services/payment/payment';
 import environment from "../config/env";
 
 
@@ -531,87 +531,46 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
   }
 
   const { amount } = value;
-  const user = req.customer || req.rider || req.vendor;
+  const user = req.customer;
 
   if (!user) {
     throw next(new ErrorResponse('User not found', 404));
   }
-  const userId = user.id;
-
-  const wallet = await Customer.customerWallet(userId) || await Vendor.vendorWallet(userId) || await Rider.riderWallet(userId);
-
-  if (!wallet) {
-    return next(new ErrorResponse('Wallet not found.', 404));
-  }
-
-  const money = Number(amount);
 
   try {
-    
-    const paymentResponse = await initializePayment(user.email, money);
-
-    wallet.transactions.push({
-      amount: amount,
+    const dataValues: any = {
+      amount,
       type: 'credit',
       date: new Date(),
-      description: paymentResponse.data.reference,
       status: 'pending',
-    });
+      [`CustomerId`]: user.id
+    }
+    const pendingTransaction = await Customer.createNewTransaction(dataValues);
 
-    await wallet.save();
+    // Initialize payment
+    const paymentResponse = await initializePayment(
+      user.email,
+      amount,
+      user.id,
+      'customer'
+    );
 
-    return AppResponse(res, 200, paymentResponse.data, 'Transaction initialized');
+    // Update transaction with payment reference
+    pendingTransaction.reference = paymentResponse.data.reference;
+    await pendingTransaction.save();
+
+    return AppResponse(
+      res,
+      200,
+      {
+        ...paymentResponse.data,
+        transactionId: pendingTransaction._id
+      },
+      'Transaction initialized'
+    );
   } catch (err: any) {
     return next(new ErrorResponse(err.message, 500));
   }
-});
-
-export const paystackWebhookHandler = asyncHandler(async (req, res, next) => {
-  // Verify the request signature
-  if (!environment.PAYSTACK_SECRET) throw next(new ErrorResponse('Paystack secret is required', 500))
-
-  // if (!verifyPaystackSignature(req, environment.PAYSTACK_SECRET)) {
-  //   console.error('Invalid Paystack signature');
-  //   return res.status(401).send('Invalid signature');
-  // }
-
-  // Extract the event object from the webhook payload
-  const event = req.body;
-
-  // Process different event types
-  switch (event.event) {
-    case 'charge.success': {
-      console.log('Charge successful event received:', event.data);
-      const reference: string = event.data.reference;
-      const amount: number = event.data.amount; 
-
-      // const wallet = await findWalletByTransactionReference(reference);
-      // if (!wallet) {
-      //   console.error('Wallet not found for reference:', reference);
-      //   break; 
-      // }
-
-      // const transaction = wallet.transactions.find((tx: any) => tx.reference === reference);
-      // if (!transaction) {
-      //   console.error('Transaction not found for reference:', reference);
-      //   break;
-      // }
-
-      // transaction.status = 'completed';
-      // transaction.amount = amount;
-      // wallet.balance += amount; 
-
-      // await wallet.save();
-      // console.log(`Wallet updated for transaction ${reference}`);
-      // break;
-    }
-
-    default:
-      console.log('Unhandled event type:', event.event);
-      break;
-  }
-
-  return AppResponse(res, 200, null, 'Payment successful');
 });
 
 export const payOrderAmountToVendor = asyncHandler(async (req, res, next) => {
@@ -639,28 +598,30 @@ export const payOrderAmountToVendor = asyncHandler(async (req, res, next) => {
   }
 
   customerWallet.balance -= order.totalPrice;
-  customerWallet.transactions.push({
+
+  const customerTransactValues: any = {
     amount: order.totalPrice,
     type: 'debit',
     date: new Date(),
     description: `Payment for Order ID: ${orderId}`,
     status: 'completed'
-  });
+  }
 
-  await customerWallet.save();
+  const customerTransaction = Customer.createNewTransaction(customerTransactValues)
 
   vendorWallet.balance += order.totalPrice;
-  vendorWallet.transactions.push({
+  
+  const vendorTransactValues: any = {
     amount: order.totalPrice,
     type: 'credit',
     date: new Date(),
     description: `Payment for Order ID: ${orderId}`,
     status: 'completed'
-  });
+  }
 
-  await vendorWallet.save();
+  const vendorTransaction = await Vendor.createNewTransaction(vendorTransactValues)
 
-  return AppResponse(res, 200, { customerWallet, vendorWallet }, 'Payment has been made');
+  return AppResponse(res, 200, { customerTransaction, vendorTransaction }, 'Payment has been made');
 });
 
 export const payOrderAmountToRider = asyncHandler(async (req, res, next) => {
@@ -688,15 +649,17 @@ export const payOrderAmountToRider = asyncHandler(async (req, res, next) => {
   }
 
   customerWallet.balance -= order.deliveryFee;
-  customerWallet.transactions.push({
+  
+  const customerTransactValues: any = {
     amount: order.deliveryFee,
     type: 'debit',
     date: new Date(),
     description: `Payment for Order ID: ${orderId}`,
     status: 'pending'
-  });
+  }
 
-  await customerWallet.save();
+  const customerTransaction = await Customer.createNewTransaction(customerTransactValues);
 
-  return AppResponse(res, 200, customerWallet , 'Payment has been made');
+  return AppResponse(res, 200, customerTransaction , 'Payment has been made');
 });
+

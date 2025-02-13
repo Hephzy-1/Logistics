@@ -1,35 +1,18 @@
 import { Schema, model, Document, Types } from 'mongoose';
-
-interface ITransaction {
-  amount: number;
-  type: 'credit' | 'debit';
-  date: Date;
-  description?: string;
-  status: 'pending' | 'completed';
-  orderId?: Types.ObjectId;
-  reference?: string;
-}
  
 export interface IWallet extends Document {
-  customerId: Types.ObjectId;
+  customerId?: Types.ObjectId;
+  vendorId?: Types.ObjectId;
+  riderId?: Types.ObjectId;
   balance: number;
-  transactions: ITransaction[];
 }
-
-const transactionSchema = new Schema<ITransaction>({
-  amount: { type: Number, required: true },
-  type: { type: String, enum: ['credit', 'debit'], required: true },
-  date: { type: Date, default: Date.now },
-  description: { type: String },
-  status: { type: String, enum: ['pending', 'completed'], required: true },
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
-  reference: { type: String },
-});
 
 const walletSchema = new Schema<IWallet>({
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+  vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+  riderId: { type: Schema.Types.ObjectId, ref: 'Rider', required: true },
   balance: { type: Number, required: true, default: 0 },
-  transactions: [transactionSchema],
+  
 }, {
   timestamps: true,
   toJSON: {

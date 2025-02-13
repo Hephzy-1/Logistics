@@ -2,16 +2,18 @@ import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Rider } from "../usecases/rider";
 import { comparePassword } from '../utils/hash';
-import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
+import { addWallet, loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto';
 import passport from '../config/google';
 import { NextFunction, Request, Response } from 'express';
-import { sendOTP, sendResetLink } from '../utils/sendEmail';
+import { sendOTP, sendResetLink } from '../services/email/sendEmail';
 import { profile, registerRider, orderStatus } from '../validators/rider';
 import { AppResponse } from '../middlewares/appResponse';
 import { Vendor } from '../usecases/vendor';
 import { uploadImageToCloudinary, validateImage } from '../utils/cloudinary';
+import { initializePayment } from '../services/payment/payment';
+import { Customer } from '../usecases/customer';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerRider.validate(req.body);
@@ -436,6 +438,56 @@ export const createWallet = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 201, newWallet, 'New wallet has been created');
 });
 
+export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { error, value } = addWallet.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { amount } = value;
+  const user = req.customer;
+
+  if (!user) {
+    throw next(new ErrorResponse('User not found', 404));
+  }
+
+  try {
+    const dataValues: any = {
+      amount,
+      type: 'credit',
+      date: new Date(),
+      status: 'pending',
+      [`RiderId`]: user.id
+    }
+    const pendingTransaction = await Rider.createNewTransaction(dataValues);
+
+    // Initialize payment
+    const paymentResponse = await initializePayment(
+      user.email,
+      amount,
+      user.id,
+      'rider'
+    );
+
+    // Update transaction with payment reference
+    pendingTransaction.reference = paymentResponse.data.reference;
+    await pendingTransaction.save();
+
+    return AppResponse(
+      res,
+      200,
+      {
+        ...paymentResponse.data,
+        transactionId: pendingTransaction._id
+      },
+      'Transaction initialized'
+    );
+  } catch (err: any) {
+    return next(new ErrorResponse(err.message, 500));
+  }
+});
+
 export const payAmountToRider = asyncHandler(async (req, res, next) => {
   const riderId = req.rider?._id as string; 
   const { orderId } = req.body;
@@ -454,27 +506,23 @@ export const payAmountToRider = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse('Vendor wallet not found.', 404));
   }
 
-  const customerWallet = await Rider.riderWallet(riderId)
+  const customerTransactions = await Customer.customerTransactionByOrderId(orderId)
 
-  if (!customerWallet) {
-    throw next(new ErrorResponse('Customer Wallet not found', 404));
-  }
-
-  let orderTransaction = customerWallet.transactions.find(transaction => transaction.orderId === orderId);
-  if (!orderTransaction || orderTransaction.status !== 'pending') {
+  if (!customerTransactions || customerTransactions.status !== 'pending') {
     throw next(new ErrorResponse("Transaction hasn't been made", 400));
   }
 
   riderWallet.balance += order.deliveryFee;
-  riderWallet.transactions.push({
+
+  const riderTransactValues: any = {
     amount: order.deliveryFee,
     type: 'credit',
     date: new Date(),
-    description: `Payment for Order ID: ${orderId}`,
+    description: `Payment for delivery of Order ID: ${orderId}`,
     status: 'completed'
-  });
+  }
 
-  await riderWallet.save();
+  const riderTransaction = await Rider.createNewTransaction(riderTransactValues);
 
-  return AppResponse(res, 200, customerWallet , 'Payment has been made');
+  return AppResponse(res, 200, riderTransaction , 'Payment has been made');
 });

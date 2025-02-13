@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import environment from '../config/env';
-import { ErrorResponse } from './errorResponse';
+import environment from '../../config/env';
+import { ErrorResponse } from '../../utils/errorResponse';
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',

@@ -3,7 +3,8 @@ import { hashPassword } from "../utils/hash";
 import { generateToken } from "../utils/jwt";
 import crypto from 'crypto';
 import Order from "../models/order";
-import Wallet from "../models/wallet";
+import Wallet, { IWallet } from "../models/wallet";
+import Transaction, { ITransaction } from "../models/transaction";
 
 export class RiderRepository {
   static async createRider (values: IRider) {
@@ -91,13 +92,39 @@ export class RiderRepository {
     return order;
   } 
 
+  static async createWallet (values: IWallet) {
+    const newWallet = await Wallet.create({
+      riderId: values.riderId,
+      balance: 0
+    });
+
+    return newWallet;
+  }
+
   static async getRiderWallet(riderId: string) {
     const riderWallet = await Wallet.findOne({ customerId: riderId });
     return riderWallet;
   }
 
-  static async getRiderWalletByReference(reference: string) {
-    const riderWallet = await Wallet.findOne({ reference });
+  static async getRiderWalletById (id: string) {
+    const riderWallet = await Wallet.findById(id);
     return riderWallet;
+  }
+
+  static async createTransaction (values: ITransaction) {
+    const transaction = await Transaction.create({
+      riderId: values.riderId,
+      amount: values.amount,
+      reference: values.reference,
+      status: values.status
+    });
+
+    return transaction
+
+  }
+
+  static async getRiderTransactionByReference(reference: string) {
+    const riderTransaction = await Transaction.findOne({ reference });
+    return riderTransaction;
   }
 }

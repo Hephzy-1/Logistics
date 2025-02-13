@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, payOrderAmountToVendor, paystackWebhookHandler } from '../handlers/customer';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, payOrderAmountToVendor } from '../handlers/customer';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
@@ -32,7 +32,7 @@ route.route('/order')
   .get(getOrdersByCustomer);
 route.route('/wallet')
   .post(createWallet)
-  .put(paystackWebhookHandler)
+  
 route.post('/transaction', payOrderAmountToVendor)
 
 export default route;

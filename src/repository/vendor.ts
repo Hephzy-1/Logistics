@@ -7,6 +7,7 @@ import Menu, { IMenu } from '../models/menu';
 import { NextFunction } from "express";
 import Order from '../models/order';
 import Wallet, { IWallet } from "../models/wallet";
+import Transaction, { ITransaction } from "../models/transaction";
 
 export class VendorRepository {
   static async createVendor(values: IVendor) {
@@ -225,7 +226,7 @@ export class VendorRepository {
 
   static async createWallet (values: IWallet) {
     const newWallet = await Wallet.create({
-      customerId: values.customerId,
+      vendorId: values.vendorId,
       balance: 0
     });
 
@@ -233,14 +234,30 @@ export class VendorRepository {
   }
 
   static async getVendorWallet(vendorId: string) {
-    const vendorWallet = await Wallet.findOne({ customerId: vendorId });
+    const vendorWallet = await Wallet.findOne({ vendorId });
 
     return vendorWallet;
   }
 
-  static async getVendorWalletByReference(reference: string) {
-    const vendorWallet = await Wallet.findOne({ reference });
-
+  static async getVendorWalletById (id: string) {
+    const vendorWallet = await Wallet.findById(id);
     return vendorWallet;
+  }
+
+  static async createTransaction (values: ITransaction) {
+    const transaction = await Transaction.create({
+      vendorId: values.vendorId,
+      amount: values.amount,
+      reference: values.reference,
+      status: values.status
+    });
+
+    return transaction;
+  }
+
+  static async getVendorTransactionByReference(reference: string) {
+    const vendorTransaction = await Transaction.findOne({ reference });
+
+    return vendorTransaction;
   }
 }

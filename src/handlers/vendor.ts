@@ -2,14 +2,15 @@ import asyncHandler from '../middlewares/async';
 import { Request, Response, NextFunction } from 'express';
 import { ErrorResponse } from "../utils/errorResponse";
 import { Vendor } from "../usecases/vendor";
-import { loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
+import { addWallet, loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
 import { comparePassword, compareToken, hashToken } from '../utils/hash';
 import { generateToken } from '../utils/jwt';
 import crypto from 'crypto'; 
-import { sendOTP, sendResetLink } from '../utils/sendEmail';
+import { sendOTP, sendResetLink } from '../services/email/sendEmail';
 import { profile, registerVendor, menus, orderStatus } from '../validators/vendor';
 import { AppResponse } from '../middlewares/appResponse';
 import { uploadImageToCloudinary, validateImage } from '../utils/cloudinary';
+import { initializePayment } from '../services/payment/payment';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerVendor.validate(req.body);
@@ -395,4 +396,55 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
   }
 
   return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
+});
+
+
+export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { error, value } = addWallet.validate(req.body);
+
+  if (error) {
+    throw next(new ErrorResponse(error.details[0].message, 400));
+  }
+
+  const { amount } = value;
+  const user = req.customer;
+
+  if (!user) {
+    throw next(new ErrorResponse('User not found', 404));
+  }
+
+  try {
+    const dataValues: any = {
+      amount,
+      type: 'credit',
+      date: new Date(),
+      status: 'pending',
+      [`VendorId`]: user.id
+    }
+    const pendingTransaction = await Vendor.createNewTransaction(dataValues);
+
+    // Initialize payment
+    const paymentResponse = await initializePayment(
+      user.email,
+      amount,
+      user.id,
+      'customer'
+    );
+
+    // Update transaction with payment reference
+    pendingTransaction.reference = paymentResponse.data.reference;
+    await pendingTransaction.save();
+
+    return AppResponse(
+      res,
+      200,
+      {
+        ...paymentResponse.data,
+        transactionId: pendingTransaction._id
+      },
+      'Transaction initialized'
+    );
+  } catch (err: any) {
+    return next(new ErrorResponse(err.message, 500));
+  }
 });

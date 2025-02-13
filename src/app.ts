@@ -12,13 +12,22 @@ import vendorRoute from './deliverymen/vendor';
 import riderRoute from './deliverymen/rider';
 import { oAuth } from "./handlers/rider";
 import upload from "./utils/multer";
-import { webhook } from "./utils/payment";
+import { webhook } from "./services/payment/payment";
 
 const app = express();
 
 if (!environment.SESSION_SECRET) {
   throw new ErrorResponse('Secret key is required', 500);
 }
+
+
+app.use((req: express.Request, res: express.Response, next: express.NextFunction): void => {
+  if (req.originalUrl === '/paystack/webhook') {
+    next();
+  } else {
+    express.json({ limit: '50mb' })(req, res, next);
+  }
+});
 
 app.use(express.json());
 app.use(cors({ credentials: true }));
@@ -30,6 +39,12 @@ app.use(passport.session());
 
 app.get('/', asyncHandler(async (req: Request, res: Response) => {
   return AppResponse(res, 200, null, 'Welcome');
+}));
+
+app.use('/paystack/webhook', express.json({
+  verify: (req: express.Request, res: express.Response, buf: Buffer) => {
+    (req as any).rawBody = buf.toString();
+  }
 }));
 
 app.post('/paystack/webhook', webhook)

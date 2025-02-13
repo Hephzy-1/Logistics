@@ -42,7 +42,19 @@ export class Rider {
     return await RiderRepository.getRiderWallet(riderId)
   }
 
-  static async riderWalletByReference (reference: string) {
-    return await RiderRepository.getRiderWalletByReference(reference)
+  static async riderWalletById (id: string) {
+    return await RiderRepository.getRiderWalletById(id)
+  }
+
+  static async createNewTransaction (values: any) {
+    return await RiderRepository.createTransaction(values)
+  }
+  
+  // static async riderTransactions (riderId: string) {
+  //   return await RiderRepository.getRiderTransactions(riderId)
+  // }
+
+  static async riderTransactionByReference (reference: string) {
+    return await RiderRepository.getRiderTransactionByReference(reference)
   }
 }

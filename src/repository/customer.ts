@@ -6,7 +6,8 @@ import Cart, { ICart, ICartItem } from '../models/cart';
 import { ErrorResponse } from "../utils/errorResponse";
 import Order, { IOrder } from "../models/order";
 import mongoose from 'mongoose'; 
-import Wallet from "../models/wallet";
+import Wallet, { IWallet } from "../models/wallet";
+import Transaction, { ITransaction } from "../models/transaction";
 
 export class CustomerRepository {
   static async createCustomer (values: ICustomer) {
@@ -201,13 +202,68 @@ export class CustomerRepository {
     return order;
   }
   
+  static async createWallet (values: IWallet) {
+    const newWallet = await Wallet.create({
+      customerId: values.customerId,
+      balance: 0
+    });
+
+    return newWallet;
+  }
+  
   static async getCustomerWallet (customerId: string) {
     const customerWallet = await Wallet.findOne({ customerId });
     return customerWallet
   }
-  
-  static async getCustomerWalletByReference (reference: string) {
-    const customerWallet = await Wallet.findOne({ reference });
+
+  static async getCustomerWalletById (id: string) {
+    const customerWallet = await Wallet.findById(id);
     return customerWallet
   }
+  
+  static async createTransaction (values: ITransaction) {
+    const transaction = await Transaction.create({
+      customerId: values.customerId,
+      amount: values.amount,
+      reference: values.reference,
+      status: values.status
+    });
+
+    return transaction
+
+  }
+
+  static async getCustomerTransactionByReference (reference: string) {
+    const customerTransaction = await Transaction.findOne({ reference });
+    return customerTransaction
+  }
+
+  static async getCustomerTransactionByOrderId (orderId: string) {
+    const customerTransaction = await Transaction.findOne({ orderId });
+    return customerTransaction
+  }
+
+  static async getCustomerTransactions (customerId: string) {
+    const transactions = await Transaction
+      .find({ customerId })
+      .sort({ createdAt: -1 });
+    return transactions;
+  }
+
+  static async updateTransaction (values: Partial<ITransaction>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof ITransaction] !== undefined) {
+        updates[key] = values[key as keyof ITransaction];
+      }
+    }
+  
+    const transaction = await Transaction.updateOne(
+      { _id: values.id },
+      { $set: updates }
+    );
+  
+    return transaction;
+  }  
 }

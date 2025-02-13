@@ -2,6 +2,7 @@ import { IVendor } from '../models/vendor';
 import { VendorRepository } from '../repository/vendor';
 import { IMenu } from '../models/menu';
 import { IWallet } from '../models/wallet';
+import { ITransaction } from '../models/transaction';
 
 export class Vendor {
   static async create (vendor:IVendor) {
@@ -119,7 +120,15 @@ export class Vendor {
     return await VendorRepository.getVendorWallet(vendorId)
   }
 
-  static async vendorWalletByReference (reference: string) {
-    return await VendorRepository.getVendorWalletByReference(reference)
+  static async vendorWalletById (id: string) {
+    return await VendorRepository.getVendorWalletById(id)
+  }
+
+  static async createNewTransaction (values: ITransaction) {
+    return await VendorRepository.createTransaction(values)
+  }
+
+  static async vendorTransactionByReference (reference: string) {
+    return await VendorRepository.getVendorTransactionByReference(reference)
   }
 }

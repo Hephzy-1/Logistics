@@ -3,8 +3,6 @@ import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, u
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
-import multer from 'multer';
-import { paystackWebhookHandler } from '../handlers/customer';
 import { ErrorResponse } from '../utils/errorResponse';
 import cache from '../middlewares/cache';
 import { createWallet } from '../handlers/rider';
@@ -42,8 +40,7 @@ route.get('/getOrder', cache, getOrdersByVendor);
 route.put('/update-orderStatus', updateAcceptedStatus)
 route.put('/available-order', updateAvailability)
 route.route('/wallet')
-  .post(createWallet)
-  .put(paystackWebhookHandler);
+  .post(createWallet);
 // route.route('/transactions')
 //   .put(verifyAddToWallet)
 

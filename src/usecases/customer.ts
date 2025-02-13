@@ -2,6 +2,7 @@ import { ICustomer } from '../models/customer';
 import { CustomerRepository } from '../repository/customer';
 import { ICart, ICartItem } from '../models/cart';
 import { IOrder } from '../models/order';
+import { ITransaction } from '../models/transaction';
 
 export class Customer {
   static async create (customer:ICustomer) {
@@ -64,7 +65,27 @@ export class Customer {
     return await CustomerRepository.getCustomerWallet(customerId)
   }
 
-  static async customerWalletByReference (reference: string) {
-    return await CustomerRepository.getCustomerWalletByReference(reference)
+  static async customerWalletById (id: string) {
+    return await CustomerRepository.getCustomerWalletById(id)
+  }
+
+  static async createNewTransaction (values: ITransaction) {
+    return await CustomerRepository.createTransaction(values)
+  }
+
+  static async customerTransactions (customerId: string) {
+    return await CustomerRepository.getCustomerTransactions(customerId)
+  }
+
+  static async customerTransactionByReference (reference: string) {
+    return await CustomerRepository.getCustomerTransactionByReference(reference)
+  }
+
+  static async customerTransactionByOrderId (orderId: string) {
+    return await CustomerRepository.getCustomerTransactionByReference(orderId)
+  }
+
+  static async updateTransactionStatus (values: ITransaction) {
+    return await CustomerRepository.updateTransaction(values)
   }
 }
