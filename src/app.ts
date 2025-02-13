@@ -20,7 +20,6 @@ if (!environment.SESSION_SECRET) {
   throw new ErrorResponse('Secret key is required', 500);
 }
 
-
 app.use((req: express.Request, res: express.Response, next: express.NextFunction): void => {
   if (req.originalUrl === '/paystack/webhook') {
     next();

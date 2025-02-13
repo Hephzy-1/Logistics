@@ -40,10 +40,10 @@ export const initializePayment = async (
   return response.data;
 };
 
-const verifyPaystackWebhook = (eventData: any, signature: string) => {
+const verifyPaystackWebhook = (rawBody: string, signature: string) => {
   const hash = crypto
     .createHmac('sha512', PAYSTACK_SECRET_KEY)
-    .update(JSON.stringify(eventData))
+    .update(JSON.stringify(rawBody))
     .digest('hex');
 
   return hash === signature;
@@ -93,27 +93,20 @@ const updateWalletAndCreateTransaction = async (
 };
 
 export const webhook = asyncHandler(async (req: Request, res: Response) => {
-  const event = req.body;
+  const rawBody = (req as any).rawBody; 
   const signature = req.headers['x-paystack-signature'];
 
-  if (!verifyPaystackWebhook(event, signature as string)) {
+  if (!verifyPaystackWebhook(rawBody, signature as string)) {
     throw new ErrorResponse('Webhook signature verification failed', 400);
   }
-  
+
+  const event = JSON.parse(rawBody); 
+
   switch (event.event) {
     case 'charge.success':
-      const {
-        reference,
-        status: paymentStatus,
-        id: transactionId,
-        metadata,
-        amount
-      } = event.data;
-
-      // Get the actual amount (Paystack amount is in kobo/cents)
+      const { reference, status: paymentStatus, id: transactionId, metadata, amount } = event.data;
       const actualAmount = amount / 100;
 
-      // Update wallet and create transaction
       const transaction = await updateWalletAndCreateTransaction(
         metadata.userId,
         metadata.userType,
@@ -124,12 +117,7 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
       return AppResponse(
         res,
         200,
-        {
-          transactionId,
-          reference,
-          paymentStatus,
-          transactionDetails: transaction
-        },
+        { transactionId, reference, paymentStatus, transactionDetails: transaction },
         'Payment successful and wallet updated'
       );
 

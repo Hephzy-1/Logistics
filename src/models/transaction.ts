@@ -14,12 +14,6 @@ export interface ITransaction extends Document {
 
 }
 
-
-
-
-
-
-
 const transactionSchema = new Schema<ITransaction>({
   amount: { type: Number, required: true },
   type: { type: String, enum: ['credit', 'debit'], required: true },

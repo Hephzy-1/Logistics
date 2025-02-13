@@ -543,11 +543,11 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       type: 'credit',
       date: new Date(),
       status: 'pending',
-      [`CustomerId`]: user.id
+      customerId: user.id
     }
+
     const pendingTransaction = await Customer.createNewTransaction(dataValues);
 
-    // Initialize payment
     const paymentResponse = await initializePayment(
       user.email,
       amount,
