@@ -97,12 +97,9 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
   const rawBody = (req as any).rawBody; 
   const signature = req.headers['x-paystack-signature'];
 
-  console.log(rawBody, signature);
-
   const secret = PAYSTACK_SECRET_KEY;
   const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
 
- console.log({hash, secret, headers: req.headers})
  if (hash !== req.headers['x-paystack-signature']) {
     throw new ErrorResponse('Webhook signature required', 500)
   }
@@ -110,6 +107,7 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body;
 
   const event = JSON.parse(rawBody)
+  console.log({ metadata: payload.data.metadata })
 
   switch (event.event) {
     case 'charge.success':
