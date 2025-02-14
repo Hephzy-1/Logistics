@@ -523,6 +523,23 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, order, `Order status updated to ${status}.`);
 });
 
+export const createWallet = asyncHandler(async (req, res, next) => {
+  const userId = req.customer?._id as string;
+
+  const existingWallet = await Customer.customerWallet(userId);
+  if (existingWallet) {
+    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  }
+
+  const wallet: any = {
+    customerId: userId
+  };
+
+  const newWallet = await Customer.createNewWallet(wallet);
+
+  return AppResponse(res, 201, newWallet, 'New wallet has been created');
+});
+
 export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = addWallet.validate(req.body);
 
@@ -550,9 +567,10 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
 
     const paymentResponse = await initializePayment(
       user.email,
-      amount,
+      amount, 
       user.id,
-      'customer'
+      'customer',
+      pendingTransaction.id
     );
 
     // Update transaction with payment reference
@@ -663,3 +681,31 @@ export const payOrderAmountToRider = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, customerTransaction , 'Payment has been made');
 });
 
+export const getWalletBalance = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.customer?.id;
+  
+  if (!userId) {
+    throw next(new ErrorResponse('User not found', 404));
+  }
+
+  const wallet = await Customer.customerWallet(userId);
+
+  if (!wallet) {
+    throw next(new ErrorResponse('Wallet not found', 404));
+  }
+
+  return AppResponse(res, 200, { balance: wallet.balance }, 'Wallet balance retrieved');
+});
+
+// Helper function to get transaction history
+export const getTransactionHistory = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const user = req.customer;
+  
+  if (!user) {
+    throw next(new ErrorResponse('User not found', 404));
+  }
+
+  const transactions = await Customer.customerTransactions(user.id);
+
+  return AppResponse(res, 200, { transactions }, 'Transaction history retrieved');
+});

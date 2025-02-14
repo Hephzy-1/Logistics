@@ -398,6 +398,23 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
   return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
 });
 
+export const createWallet = asyncHandler(async (req, res, next) => {
+  const userId = req.vendor?._id as string;
+
+  const existingWallet = await Vendor.vendorWallet(userId);
+  if (existingWallet) {
+    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  }
+
+  const wallet: any = {
+    vendorId: userId
+  };
+
+  const newWallet = await Vendor.createNewWallet(wallet);
+
+  return AppResponse(res, 201, newWallet, 'New wallet has been created');
+});
+
 export const addToWallet = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { error, value } = addWallet.validate(req.body);
 
@@ -427,7 +444,8 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       user.email,
       amount,
       user.id,
-      'vendor'
+      'vendor',
+      pendingTransaction.id
     );
 
     // Update transaction with payment reference

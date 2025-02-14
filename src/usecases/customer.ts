@@ -3,6 +3,7 @@ import { CustomerRepository } from '../repository/customer';
 import { ICart, ICartItem } from '../models/cart';
 import { IOrder } from '../models/order';
 import { ITransaction } from '../models/transaction';
+import { IWallet } from "../models/wallet";
 
 export class Customer {
   static async create (customer:ICustomer) {
@@ -61,6 +62,10 @@ export class Customer {
     return await CustomerRepository.getOrderByIdAndCustomerId(orderId, customerId)
   }
 
+  static async createNewWallet (values: IWallet) {
+    return await CustomerRepository.createWallet(values);  
+  }
+  
   static async customerWallet (customerId: string) {
     return await CustomerRepository.getCustomerWallet(customerId)
   }

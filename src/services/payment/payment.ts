@@ -17,7 +17,8 @@ export const initializePayment = async (
   email: string,
   amount: number,
   userId: string,
-  userType: 'customer' | 'vendor' | 'rider'
+  userType: 'customer' | 'vendor' | 'rider',
+  transactionId: string
 ) => {
   const response = await axios.post(
     'https://api.paystack.co/transaction/initialize',
@@ -26,7 +27,8 @@ export const initializePayment = async (
       amount: amount * 100,
       metadata: {
         userId,
-        userType
+        userType,
+        transactionId
       }
     },
     {
@@ -53,7 +55,8 @@ const updateWalletAndCreateTransaction = async (
   userId: string,
   userType: 'customer' | 'vendor' | 'rider',
   amount: number,
-  reference: string
+  reference: string,
+  transactionId: string
 ) => {
 
   try {
@@ -71,7 +74,8 @@ const updateWalletAndCreateTransaction = async (
       description: 'Wallet funding',
       status: 'completed',
       reference,
-      [`${userType}Id`]: userId
+      [`${userType}Id`]: userId,
+      id: transactionId
     }
 
     if (userType === 'customer') {
@@ -117,9 +121,11 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
         metadata.userId,
         metadata.userType,
         actualAmount,
-        reference
+        reference,
+        transactionId
       );
 
+      console.log('Payment successful')
       return AppResponse(
         res,
         200,

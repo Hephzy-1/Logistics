@@ -8,9 +8,9 @@ export interface IWallet extends Document {
 }
 
 const walletSchema = new Schema<IWallet>({
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-  vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
-  riderId: { type: Schema.Types.ObjectId, ref: 'Rider', required: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
+  vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor' },
+  riderId: { type: Schema.Types.ObjectId, ref: 'Rider' },
   balance: { type: Number, required: true, default: 0 },
   
 }, {

@@ -1,11 +1,10 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, payOrderAmountToVendor, addToWallet } from '../handlers/customer'; 
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, getAllVerifiedVendors, getAllVerifiedVendorsMenu, addItemToCart, getCart, clearCart, createOrderFromCart, getOrdersByCustomer, payOrderAmountToVendor, createWallet, addToWallet, getTransactionHistory, getWalletBalance } from '../handlers/customer'; 
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
 import cache from '../middlewares/cache';
-import { createWallet } from '../handlers/rider';
-
+ 
 export const route = express.Router();
 
 route.post('/register', register);
@@ -33,7 +32,10 @@ route.route('/order')
 route.route('/wallet')
   .post(createWallet)
   .put(addToWallet)
+  .get(getWalletBalance)
   
-route.post('/transaction', payOrderAmountToVendor)
+route.route('/transaction')
+  .post(payOrderAmountToVendor)
+  .get(getTransactionHistory)
 
 export default route;

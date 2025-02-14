@@ -1,5 +1,6 @@
 import { IRider } from '../models/rider';
 import { RiderRepository } from '../repository/rider';
+import { IWallet } from "../models/wallet";
 
 export class Rider {
   static async create (rider:IRider) {
@@ -36,6 +37,10 @@ export class Rider {
 
   static async orderByIdAndRider (orderId: string, riderId: string) {
     return await RiderRepository.getOrderByIdAndRiderId(orderId, riderId)
+  }
+
+  static async createNewWallet (values: IWallet) {
+    return await RiderRepository.createWallet(values);  
   }
 
   static async riderWallet (riderId: string) {

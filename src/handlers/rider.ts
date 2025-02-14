@@ -422,7 +422,7 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
 });
 
 export const createWallet = asyncHandler(async (req, res, next) => {
-  const userId = req.rider?._id as string || req.customer?._id as string || req.vendor?._id as string;
+  const userId = req.rider?._id as string;
 
   const existingWallet = await Rider.riderWallet(userId);
   if (existingWallet) {
@@ -430,10 +430,10 @@ export const createWallet = asyncHandler(async (req, res, next) => {
   }
 
   const wallet: any = {
-    customerId: userId
+    riderId: userId
   };
 
-  const newWallet = await Vendor.createNewWallet(wallet);
+  const newWallet = await Rider.createNewWallet(wallet);
 
   return AppResponse(res, 201, newWallet, 'New wallet has been created');
 });
@@ -467,7 +467,8 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       user.email,
       amount,
       user.id,
-      'rider'
+      'rider',
+      pendingTransaction.id
     );
 
     // Update transaction with payment reference
