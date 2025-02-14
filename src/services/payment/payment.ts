@@ -107,7 +107,7 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
   const payload = req.body;
 
   const event = JSON.parse(rawBody)
-  console.log({ metadata: payload.data.metadata })
+  console.log({ metadata: payload.data.metadata, payload })
 
   switch (event.event) {
     case 'charge.success':
