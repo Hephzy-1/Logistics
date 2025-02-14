@@ -251,15 +251,14 @@ export class CustomerRepository {
     return transactions;
   }
 
-  static async updateTransaction (values: ITransaction) {
-  
-    const transaction = await Transaction.updateOne(
+  static async updateTransaction(values: ITransaction) {
+    const transaction = await Transaction.findOneAndUpdate(
       { _id: values.id },
-      { $set: {
-        status: values.status
-      } }
+      { $set: { status: values.status } },
+      { new: true } // Returns the updated document
     );
   
     return transaction;
-  }  
+  }
+  
 }

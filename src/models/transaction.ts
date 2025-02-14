@@ -5,7 +5,7 @@ export interface ITransaction extends Document {
   type: 'credit' | 'debit';
   date: Date;
   description?: string;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'pending';
   orderId?: Types.ObjectId;
   reference?: string;
   customerId?: Types.ObjectId;
@@ -19,7 +19,7 @@ const transactionSchema = new Schema<ITransaction>({
   type: { type: String, enum: ['credit', 'debit'], required: true },
   date: { type: Date, default: Date.now },
   description: { type: String },
-  status: { type: String, enum: ['pending', 'completed'], required: true },
+  status: { type: String, enum: ['pending', 'completed', 'failed' ], required: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
   reference: { type: String },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
