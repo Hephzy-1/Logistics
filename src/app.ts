@@ -46,7 +46,7 @@ app.use('/paystack/webhook', express.json({
   }
 }));
 
-app.get('/paystack/webhook', webhook)
+app.post('/paystack/webhook', webhook)
 app.use('/api/v1/customer', customerRoute);
 app.use('/api/v1/vendor', vendorRoute);
 app.use('/api/v1/rider', riderRoute);

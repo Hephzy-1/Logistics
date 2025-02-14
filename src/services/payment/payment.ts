@@ -40,14 +40,14 @@ export const initializePayment = async (
   return response.data;
 };
 
-const verifyPaystackWebhook = (rawBody: string, signature: string) => {
-  const hash = crypto
-    .createHmac('sha512', PAYSTACK_SECRET_KEY)
-    .update(JSON.stringify(rawBody))
-    .digest('hex');
+// const verifyPaystackWebhook = (rawBody: string, signature: string) => {
+//   const hash = crypto
+//     .createHmac('sha512', PAYSTACK_SECRET_KEY)
+//     .update(JSON.stringify(rawBody))
+//     .digest('hex');
 
-  return hash === signature;
-};
+//   return hash === signature;
+// };
 
 const updateWalletAndCreateTransaction = async (
   userId: string,
@@ -55,6 +55,7 @@ const updateWalletAndCreateTransaction = async (
   amount: number,
   reference: string
 ) => {
+
   try {
     // Find or create wallet
     let wallet = await Customer.customerWallet(userId) || Vendor.vendorWallet(userId) || Rider.riderWallet(userId);
@@ -98,11 +99,17 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
 
   console.log(rawBody, signature);
 
-  if (!verifyPaystackWebhook(rawBody, signature as string)) {
-    throw new ErrorResponse('Webhook signature verification failed', 400);
-  }
+  const secret = PAYSTACK_SECRET_KEY;
+  const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
 
-  const event = JSON.parse(rawBody); 
+ console.log({hash, secret, headers: req.headers})
+ if (hash !== req.headers['x-paystack-signature']) {
+    throw new ErrorResponse('Webhook signature required', 500)
+  }
+    
+  const payload = req.body;
+
+  const event = JSON.parse(rawBody)
 
   switch (event.event) {
     case 'charge.success':
@@ -127,3 +134,34 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
       throw new ErrorResponse('Event not handled', 400);
   }
 });
+
+// export const handlePaystackCallback = asyncHandler(async (req: Request, res: Response) => {
+//   // If you specified a secret hash, check for the signature
+// const secret = ENVIRONMENT.PAYSTACK.SECRET_KEY;
+// const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
+
+//  console.log({hash, secret, headers: req.headers})
+//  if (hash == req.headers['x-paystack-signature']) {
+//      const payload = req.body;
+//      if (
+//          payload.event === 'charge.success' &&
+//          payload.data.status === 'success' &&
+//          payload.data.currency === 'NGN'
+//      ) {
+//          console.log('success in the paystack webhook')
+//          console.log({ metadata: payload.data.metadata.custom_fields })
+//          // Success! Confirm the customer's payment
+//          const bookingId = payload.data.metadata.custom_fields[0].value;
+//          console.log({ bookingId })
+//          const result = await BookingService.handlewebhook(bookingId);
+//          if (result) {
+//              return AppResponse(res, 200, null, 'Payment was Successful');
+//          }
+//      } else {
+//          // Inform the customer their payment was unsuccessful
+//          return AppResponse(res, 200, null, 'Payment was Unsuccessful');
+//      }
+//  } else {
+//      throw new ErrorResponse('Paystack hash or secret incorrect', 400)
+//  }
+// });
