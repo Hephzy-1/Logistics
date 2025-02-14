@@ -258,6 +258,7 @@ export class CustomerRepository {
       { new: true } // Returns the updated document
     );
   
+    console.log('Updated transaction', transaction)
     return transaction;
   }
   

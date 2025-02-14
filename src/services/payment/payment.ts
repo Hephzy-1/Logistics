@@ -93,6 +93,7 @@ const updateWalletAndCreateTransaction = async (
     } 
 
   } catch (error) {
+    console.error(error)
     throw new ErrorResponse('Error updating transaction', 500);
   }
 };
