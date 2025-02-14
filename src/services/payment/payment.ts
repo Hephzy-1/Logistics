@@ -94,7 +94,7 @@ const updateWalletAndCreateTransaction = async (
 };
 
 export const webhook = asyncHandler(async (req: Request, res: Response) => {
-  const rawBody = (req as any).rawBody; 
+  
   const signature = req.headers['x-paystack-signature'];
 
   const secret = PAYSTACK_SECRET_KEY;
@@ -106,12 +106,11 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
     
   const payload = req.body;
 
-  const event = JSON.parse(rawBody)
   console.log({ metadata: payload.data.metadata, payload })
 
-  switch (event.event) {
+  switch (payload.event) {
     case 'charge.success':
-      const { reference, status: paymentStatus, id: transactionId, metadata, amount } = event.data;
+      const { reference, status: paymentStatus, id: transactionId, metadata, amount } = payload.data;
       const actualAmount = amount / 100;
 
       const transaction = await updateWalletAndCreateTransaction(
