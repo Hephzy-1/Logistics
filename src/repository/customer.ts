@@ -253,7 +253,7 @@ export class CustomerRepository {
 
   static async updateTransaction(values: ITransaction) {
     const transaction = await Transaction.findOneAndUpdate(
-      { _id: values.id },
+      { id: values.id },
       { $set: { status: values.status } },
       { new: true } // Returns the updated document
     );
