@@ -78,16 +78,17 @@ const updateWalletAndCreateTransaction = async (
       id: transactionId
     }
 
-    if (userType === 'customer') {
+    if (userType == 'customer') {
+      console.log(transactValues)
       const transaction = await Customer.updateTransactionStatus(transactValues);
       console.log(transaction)
 
       return transaction;
-    } else if (userType === 'vendor') {
+    } else if (userType == 'vendor') {
       const transaction = await Vendor.createNewTransaction(transactValues);
 
       return transaction;
-    } else if (userType === 'rider') {
+    } else if (userType == 'rider') {
       const transaction = await Rider.createNewTransaction(transactValues);
 
       return transaction;
