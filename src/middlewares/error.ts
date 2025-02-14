@@ -8,7 +8,7 @@ function errorHandler(err: ErrorResponse | Error, req:Request, res:Response, nex
     error = new ErrorResponse(err.message || 'Internal Server Error', 500);
   }
 
-  console.error(error.statusCode);
+  console.error({error.statusCode, error.message});
   res.status(error.statusCode || 500).json({
     success: false,
     error: {
