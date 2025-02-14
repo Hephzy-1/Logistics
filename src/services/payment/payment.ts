@@ -60,21 +60,9 @@ const updateWalletAndCreateTransaction = async (
 ) => {
 
   try {
-    // Find or create wallet
-    let wallet = await Customer.customerWallet(userId) || Vendor.vendorWallet(userId) || Rider.riderWallet(userId);
-
-    if (!wallet) {
-      throw new ErrorResponse('No wallet found', 404);
-    }
 
     const transactValues: any = {
-      amount,
-      type: 'credit',
-      date: new Date(),
-      description: 'Wallet funding',
       status: 'completed',
-      reference,
-      [`${userType}Id`]: userId,
       id: transactionId
     }
 
@@ -83,7 +71,17 @@ const updateWalletAndCreateTransaction = async (
       const transaction = await Customer.updateTransactionStatus(transactValues);
       console.log(transaction)
 
-      return transaction;
+      let wallet = await Customer.customerWallet(userId)
+
+      if (!wallet) {
+        throw new ErrorResponse('No wallet found', 404);
+      }
+
+      wallet.balance += amount;
+
+      await wallet.save();
+
+      return { transaction, wallet};
     } else if (userType == 'vendor') {
       const transaction = await Vendor.createNewTransaction(transactValues);
 
@@ -111,8 +109,6 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
   }
     
   const payload = req.body;
-
-  console.log({ metadata: payload.data.metadata, payload })
 
   switch (payload.event) {
     case 'charge.success':

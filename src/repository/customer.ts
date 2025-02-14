@@ -251,18 +251,13 @@ export class CustomerRepository {
     return transactions;
   }
 
-  static async updateTransaction (values: Partial<ITransaction>) {
-    const updates: Record<string, any> = {};
-  
-    for (const key in values) {
-      if (values[key as keyof ITransaction] !== undefined) {
-        updates[key] = values[key as keyof ITransaction];
-      }
-    }
+  static async updateTransaction (values: ITransaction) {
   
     const transaction = await Transaction.updateOne(
       { _id: values.id },
-      { $set: updates }
+      { $set: {
+        status: values.status
+      } }
     );
   
     return transaction;
