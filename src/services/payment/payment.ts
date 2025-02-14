@@ -55,7 +55,6 @@ const updateWalletAndCreateTransaction = async (
   userId: string,
   userType: 'customer' | 'vendor' | 'rider',
   amount: number,
-  reference: string,
   transactionId: string
 ) => {
 
@@ -98,6 +97,40 @@ const updateWalletAndCreateTransaction = async (
   }
 };
 
+const updateTransaction = async (
+  userType: 'customer' | 'vendor' | 'rider',
+  transactionId: string
+) => {
+
+  try {
+
+    const transactValues: any = {
+      status: 'failed',
+      id: transactionId
+    }
+
+    if (userType == 'customer') {
+      console.log(transactValues)
+      const transaction = await Customer.updateTransactionStatus(transactValues);
+      console.log(transaction)
+
+      return transaction;
+    } else if (userType == 'vendor') {
+      const transaction = await Vendor.createNewTransaction(transactValues);
+
+      return transaction;
+    } else if (userType == 'rider') {
+      const transaction = await Rider.createNewTransaction(transactValues);
+
+      return transaction;
+    } 
+
+  } catch (error) {
+    console.error(error)
+    throw new ErrorResponse('Error updating transaction', 500);
+  }
+};
+
 export const webhook = asyncHandler(async (req: Request, res: Response) => {
   
   const signature = req.headers['x-paystack-signature'];
@@ -111,8 +144,7 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
     
   const payload = req.body;
 
-  switch (payload.event) {
-    case 'charge.success':
+    if (payload.event == 'charge.success' ) {
       const { reference, status: paymentStatus, id: transactionId, metadata, amount } = payload.data;
       const actualAmount = amount / 100;
 
@@ -120,7 +152,6 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
         metadata.userId,
         metadata.userType,
         actualAmount,
-        reference,
         transactionId
       );
 
@@ -131,9 +162,15 @@ export const webhook = asyncHandler(async (req: Request, res: Response) => {
         { transactionId, reference, paymentStatus, transactionDetails: transaction },
         'Payment successful and wallet updated'
       );
+  } else {
+    const { status: paymentStatus, id: transactionId, metadata } = payload.data;
+    const transaction = await updateTransaction(
+      metadata.userType,
+      transactionId
+    )
 
-    default:
-      throw new ErrorResponse('Event not handled', 400);
+    console.error(`Event not handled. Transaction failed ${transaction}`);
+    throw new ErrorResponse(`Event not handled. Transaction failed ${transaction}. Status: ${paymentStatus}`, 400);
   }
 });
 
