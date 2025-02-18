@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus, updateAvailability, createWallet } from '../handlers/vendor';
+import { login, register, resendOTP, verifyOTP, forgetPassword, resetPassword, updatePassword, updateProfile, newMenu, updateMenu, getOrdersByVendor, updateAcceptedStatus, updateAvailability, createWallet, addToWallet } from '../handlers/vendor';
 import passport from '../config/google';
 import { isOwner, protect } from '../middlewares';
 import upload from '../utils/multer';
@@ -39,7 +39,8 @@ route.get('/getOrder', cache, getOrdersByVendor);
 route.put('/update-orderStatus', updateAcceptedStatus)
 route.put('/available-order', updateAvailability)
 route.route('/wallet')
-  .post(createWallet);
+  .post(createWallet)
+  .put(addToWallet);
 // route.route('/transactions')
 //   .put(verifyAddToWallet)
 

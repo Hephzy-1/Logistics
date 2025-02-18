@@ -182,10 +182,11 @@ export class CustomerRepository {
       orderStatus: 'new',
       acceptedStatus: 'pending',
       deliveredStatus: false,
-      pickedUp: false
+      pickedUp: false,
+      deliveryFee: 1000
     });
 
-    return order;
+    return order; 
   }
 
   static async getOrdersByCustomer(customerId: string) {

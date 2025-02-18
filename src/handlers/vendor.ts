@@ -27,7 +27,7 @@ export const register = asyncHandler(async (req, res, next) => {
 
   if (vendorExists) {
     console.error('Vendor Already Exists');
-    throw next(new ErrorResponse('Vendor already exists', 401));
+    throw next(new ErrorResponse('Vendor already exists', 409));
   }
 
   const newVendor = await Vendor.create(value);
@@ -51,7 +51,7 @@ export const login = asyncHandler(async (req, res, next) => {
   const vendor = await Vendor.vendorByEmail(email);
 
   if (!vendor || !vendor.password) {
-    throw next(new ErrorResponse('Invalid credentials', 401));
+    throw next(new ErrorResponse('Invalid credentials', 400));
   }
 
   const compare = await comparePassword(password, vendor.password);
@@ -423,7 +423,7 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
   }
 
   const { amount } = value;
-  const user = req.customer;
+  const user = req.vendor;
 
   if (!user) {
     throw next(new ErrorResponse('User not found', 404));
