@@ -33,8 +33,9 @@ route.put('/update-profile/:id',
   },
   updateProfile
 );
-route.post('/create-menu', newMenu);
-route.put('/update-menu', updateMenu)
+route.route('/menu') 
+  .post(newMenu)
+  .put(updateMenu)
 route.get('/getOrder', cache, getOrdersByVendor);
 route.put('/update-orderStatus', updateAcceptedStatus)
 route.put('/available-order', updateAvailability)

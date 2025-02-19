@@ -77,9 +77,10 @@ export class VendorRepository {
       }
     }
   
-    const vendor = await Vendor.updateOne(
+    const vendor = await Vendor.findOneAndUpdate(
       { _id: values.id },
-      { $set: updates }
+      { $set: updates },
+      { new: true }
     );
   
     return vendor;
@@ -181,7 +182,7 @@ export class VendorRepository {
     return menu.vendorId;
   }
 
-  static async updateMenu (values: Partial<IMenu>) {
+  static async updateMenu(values: Partial<IMenu>) {
     const updates: Record<string, any> = {};
   
     for (const key in values) {
@@ -190,21 +191,27 @@ export class VendorRepository {
       }
     }
   
-    const menu = await Menu.updateOne(
+    const updatedMenu = await Menu.findOneAndUpdate(
       { _id: values.id },
-      { $set: updates }
+      { $set: updates },
+      { new: true } 
     );
   
-    return menu;
+    return updatedMenu;
   }
 
   static async getOrdersByVendor(vendorId: string) {
     const orders = await Order.find({ vendorId })
       .populate('customerId', '_id name')
       .populate('vendorId', '_id businessName')
-      .populate('items.menuItem', '_id name price');
+      .populate({
+        path: 'items.menuItem',
+        select: '_id itemName price'
+      });
+  
+    console.log(orders);
     return orders;
-  }  
+  } 
 
   static async getOrderByIdAndVendorId ( orderId: string, vendorId: string) {
     const order = await Order.findOne({ _id: orderId, vendorId });

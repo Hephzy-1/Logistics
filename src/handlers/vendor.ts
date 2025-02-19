@@ -299,7 +299,6 @@ export const newMenu = asyncHandler(async (req, res, next) => {
 
   req.body.vendorId = req.vendor?._id; 
   // req.body.picture = await uploadProfilePic(req.file);
-  console.log(req.body)
 
   const createdMenu = await Vendor.createNewMenu(req.body);
 
@@ -313,7 +312,7 @@ export const updateMenu = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Vendor ID is required', 400));
   }
 
-  const menu = await Vendor.menuById(req.params.menuId);
+  const menu = await Vendor.menuById(req.body.id);
   if (!menu) {
     return next(new ErrorResponse('Menu not found', 404));
   }
@@ -393,7 +392,7 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
 
   if (!orders || orders.length === 0) {
     throw next(new ErrorResponse('No orders found', 404));
-  }
+  } 
 
   return AppResponse(res, 200, orders, "All new orders retrieved successfully.");
 });
