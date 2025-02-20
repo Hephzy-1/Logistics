@@ -201,13 +201,7 @@ export class VendorRepository {
   }
 
   static async getOrdersByVendor(vendorId: string) {
-    const orders = await Order.find({ vendorId })
-      .populate('customerId', '_id name')
-      .populate('vendorId', '_id businessName')
-      .populate({
-        path: 'items.menuItem',
-        select: '_id itemName price'
-      });
+    const orders = await Order.find({ vendorId });
   
     console.log(orders);
     return orders;
@@ -267,5 +261,24 @@ export class VendorRepository {
     const vendorTransaction = await Transaction.findOne({ reference });
 
     return vendorTransaction;
+  }
+
+  static async updateTransaction(values: Partial<ITransaction>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof ITransaction] !== undefined) {
+        updates[key] = values[key as keyof ITransaction];
+      }
+    }
+  
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: values.id },
+      { $set: updates },
+      { new: true } 
+    );
+  
+    console.log('Updated transacrion:', transaction);
+    return transaction;
   }
 }

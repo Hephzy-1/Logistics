@@ -1,12 +1,12 @@
 import { Request } from 'express';
 import { ICustomer } from '../models/customer';
-import { Customer } from '../usecases/customer';
+import { CustomerUsecases } from '../usecases/customer';
 import asyncHandler from './async';
 import { ErrorResponse } from '../utils/errorResponse';
-import { Vendor } from '../usecases/vendor';
+import { VendorUsecases } from '../usecases/vendor';
 import { IVendor } from '../models/vendor';
 import { IRider } from '../models/rider';
-import { Rider } from '../usecases/rider';
+import { RiderUsecases } from '../usecases/rider';
 import { verifyToken } from '../utils/jwt';
 
 // Extend Express Request type
@@ -64,26 +64,24 @@ export const protect = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.TOKEN_EXPIRED, 401));
   }
 
-  // Check for the user in each model
-  let user = await Customer.customerByToken(token);
+  let user = await CustomerUsecases.customerByToken(token);
   if (user) {
     req.customer = user as ICustomer;
     return next();
   }
 
-  user = await Vendor.vendorByToken(token);
+  user = await VendorUsecases.vendorByToken(token);
   if (user) {
     req.vendor = user as IVendor; 
     return next();
   }
 
-  user = await Rider.riderByToken(token);
+  user = await RiderUsecases.riderByToken(token);
   if (user) {
     req.rider = user as IRider; 
     return next();
   }
 
-  // If no user is found
   throw new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.USER_NOT_FOUND, 401);
 });
 
@@ -100,7 +98,6 @@ export const isOwner = asyncHandler(async (req, res, next): Promise<void> => {
     throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 401));
   }
 
-  // Use strict equality comparison with toString()
   if (currentUserId.toString() !== id.toString()) {
     throw next(new ErrorResponse(AUTH_CONSTANTS.ERROR_MESSAGES.UNAUTHORIZED, 403));
   }

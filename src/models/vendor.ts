@@ -16,6 +16,7 @@ export interface IVendor extends Document {
   otpExpires?: Date;
   resetToken?: string;
   resetTokenExpires?: Date;
+  walletId?: string;
 } 
 
 const vendorSchema = new Schema<IVendor>({
@@ -45,7 +46,10 @@ const vendorSchema = new Schema<IVendor>({
   otp: String,
   otpExpires: Date,
   resetToken: String,
-  resetTokenExpires: Date
+  resetTokenExpires: Date,
+  walletId: { type: String, required: function() {
+    return !this.googleId;
+  } }
 },
 {
   toJSON: {

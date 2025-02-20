@@ -4,7 +4,7 @@ import { IMenu } from '../models/menu';
 import { IWallet } from '../models/wallet';
 import { ITransaction } from '../models/transaction';
 
-export class Vendor {
+export class VendorUsecases {
   static async create (vendor:IVendor) {
     return await VendorRepository.createVendor(vendor);
   }
@@ -130,5 +130,9 @@ export class Vendor {
 
   static async vendorTransactionByReference (reference: string) {
     return await VendorRepository.getVendorTransactionByReference(reference)
+  }
+
+  static async updateTransactionStatus (values: ITransaction) {
+    return await VendorRepository.updateTransaction(values)
   }
 }

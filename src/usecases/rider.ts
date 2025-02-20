@@ -1,8 +1,9 @@
 import { IRider } from '../models/rider';
 import { RiderRepository } from '../repository/rider';
 import { IWallet } from "../models/wallet";
+import { ITransaction } from "../models/transaction";
 
-export class Rider {
+export class RiderUsecases {
   static async create (rider:IRider) {
     return await RiderRepository.createRider(rider);
   }
@@ -51,7 +52,7 @@ export class Rider {
     return await RiderRepository.getRiderWalletById(id)
   }
 
-  static async createNewTransaction (values: any) {
+  static async createNewTransaction (values: ITransaction) {
     return await RiderRepository.createTransaction(values)
   }
   
@@ -61,5 +62,9 @@ export class Rider {
 
   static async riderTransactionByReference (reference: string) {
     return await RiderRepository.getRiderTransactionByReference(reference)
+  }
+
+  static async updateTransactionStatus (values: ITransaction) {
+    return await RiderRepository.updateTransaction(values)
   }
 }

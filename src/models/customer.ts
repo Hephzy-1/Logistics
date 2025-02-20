@@ -14,6 +14,7 @@ export interface ICustomer extends Document {
   resetTokenExpires?: Date;
   profilePic?: string;
   address?: string;
+  walletId?: string;
 } 
 
 const customerSchema = new Schema<ICustomer>({
@@ -38,7 +39,11 @@ const customerSchema = new Schema<ICustomer>({
   profilePic: String,
   address: { type: String, required: function() {
     return !this.googleId;
-  } }
+  } },
+  walletId: { type: String, required: function() {
+    return !this.googleId;
+  } },
+  
 },
 {
   toJSON: {

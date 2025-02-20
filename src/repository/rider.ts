@@ -128,4 +128,23 @@ export class RiderRepository {
     const riderTransaction = await Transaction.findOne({ reference });
     return riderTransaction;
   }
+
+  static async updateTransaction(values: Partial<ITransaction>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof ITransaction] !== undefined) {
+        updates[key] = values[key as keyof ITransaction];
+      }
+    }
+  
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: values.id },
+      { $set: updates },
+      { new: true } 
+    );
+  
+    console.log('Updated transacrion:', transaction);
+    return transaction;
+  }
 }

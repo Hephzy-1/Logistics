@@ -47,6 +47,8 @@ export const uploadImageToCloudinary = async (file: Express.Multer.File): Promis
         }
       }
     );
+    console.log(uploadStream);
+    
     uploadStream.end(file.buffer);
   });
 };

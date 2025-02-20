@@ -16,6 +16,7 @@ export interface IRider extends Document {
   otpExpires?: Date;
   resetToken?: string;
   resetTokenExpires?: Date;
+  walletId?: string;
 } 
 
 const riderSchema = new Schema<IRider>({
@@ -28,17 +29,28 @@ const riderSchema = new Schema<IRider>({
     }
   },
   googleId: { type: Number, unique: true, sparse: true },
-  phoneNumber: { type: String, unique: true, required: true },
+  phoneNumber: { type: String, unique: true, required: function() {
+    return !this.googleId;
+  } },
   isVerified: { type: Boolean, default: false },
   token: { type: String, select: false },
-  address: { type: String, required: true },
-  vehicleNumber: { type: String, unique: true, required: true },
-  vehicleType: { type: String, required: true },
+  address: { type: String, required: function() {
+    return !this.googleId;
+  } },
+  vehicleNumber: { type: String, unique: true, required: function() {
+    return !this.googleId;
+  } },
+  vehicleType: { type: String, required: function() {
+    return !this.googleId;
+  } },
   profilePic: { type: String, default: '' },
   otp: String,
   otpExpires: Date,
   resetToken: String,
-  resetTokenExpires: Date
+  resetTokenExpires: Date,
+  walletId: { type: String, required: function() {
+    return !this.googleId;
+  } }
 },
 {
   toJSON: {

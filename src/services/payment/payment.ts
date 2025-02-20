@@ -5,9 +5,9 @@ import { ErrorResponse } from '../../utils/errorResponse';
 import { AppResponse } from '../../middlewares/appResponse';
 import asyncHandler from '../../middlewares/async';
 import axios from 'axios';
-import { Customer } from '../../usecases/customer';
-import { Vendor } from '../../usecases/vendor';
-import { Rider } from '../../usecases/rider';
+import { CustomerUsecases } from '../../usecases/customer';
+import { VendorUsecases } from '../../usecases/vendor';
+import { RiderUsecases } from '../../usecases/rider';
 
 const PAYSTACK_SECRET_KEY = environment.PAYSTACK_SECRET;
 
@@ -62,15 +62,16 @@ const updateWalletAndCreateTransaction = async (
 
     const transactValues: any = {
       status: 'completed',
-      id: transactionId
+      id: transactionId,
+      [`${userType}Id`]: userId
     }
 
     if (userType == 'customer') {
       console.log(transactValues)
-      const transaction = await Customer.updateTransactionStatus(transactValues);
+      const transaction = await CustomerUsecases.updateTransactionStatus(transactValues);
       console.log(transaction)
 
-      let wallet = await Customer.customerWallet(userId)
+      let wallet = await CustomerUsecases.customerWallet(userId)
 
       if (!wallet) {
         throw new ErrorResponse('No wallet found', 404);
@@ -82,13 +83,35 @@ const updateWalletAndCreateTransaction = async (
 
       return { transaction, wallet};
     } else if (userType == 'vendor') {
-      const transaction = await Vendor.createNewTransaction(transactValues);
+      const transaction = await VendorUsecases.updateTransactionStatus(transactValues);
+      console.log(transaction)
 
-      return transaction;
+      let wallet = await VendorUsecases.vendorWallet(userId)
+
+      if (!wallet) {
+        throw new ErrorResponse('No wallet found', 404);
+      }
+
+      wallet.balance += amount;
+
+      await wallet.save();
+
+      return { transaction, wallet};
     } else if (userType == 'rider') {
-      const transaction = await Rider.createNewTransaction(transactValues);
+      const transaction = await RiderUsecases.updateTransactionStatus(transactValues);
+      console.log(transaction)
 
-      return transaction;
+      let wallet = await RiderUsecases.riderWallet(userId)
+
+      if (!wallet) {
+        throw new ErrorResponse('No wallet found', 404);
+      }
+
+      wallet.balance += amount;
+
+      await wallet.save();
+
+      return { transaction, wallet};
     } 
 
   } catch (error) {
@@ -111,16 +134,18 @@ const updateTransaction = async (
 
     if (userType == 'customer') {
       console.log(transactValues)
-      const transaction = await Customer.updateTransactionStatus(transactValues);
+      const transaction = await CustomerUsecases.updateTransactionStatus(transactValues);
       console.log(transaction)
 
       return transaction;
     } else if (userType == 'vendor') {
-      const transaction = await Vendor.createNewTransaction(transactValues);
+      const transaction = await VendorUsecases.updateTransactionStatus(transactValues);
+      console.log(transaction)
 
       return transaction;
     } else if (userType == 'rider') {
-      const transaction = await Rider.createNewTransaction(transactValues);
+      const transaction = await RiderUsecases.updateTransactionStatus(transactValues);
+      console.log(transaction)
 
       return transaction;
     } 

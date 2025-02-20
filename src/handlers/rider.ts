@@ -1,6 +1,6 @@
 import asyncHandler from '../middlewares/async';
 import { ErrorResponse } from "../utils/errorResponse";
-import { Rider } from "../usecases/rider";
+import { RiderUsecases } from "../usecases/rider";
 import { comparePassword } from '../utils/hash';
 import { addWallet, loginUser, resetLink, resetPass, updatePass, verifyOTPInput } from '../validators';
 import { generateToken } from '../utils/jwt';
@@ -10,10 +10,10 @@ import { NextFunction, Request, Response } from 'express';
 import { sendOTP, sendResetLink } from '../services/email/sendEmail';
 import { profile, registerRider, orderStatus } from '../validators/rider';
 import { AppResponse } from '../middlewares/appResponse';
-import { Vendor } from '../usecases/vendor';
+import { VendorUsecases } from '../usecases/vendor';
 import { uploadImageToCloudinary, validateImage } from '../utils/cloudinary';
 import { initializePayment } from '../services/payment/payment';
-import { Customer } from '../usecases/customer';
+import { CustomerUsecases } from '../usecases/customer';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { error, value } = registerRider.validate(req.body);
@@ -25,24 +25,30 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const { name, email, password, phoneNumber, address, vehicleNumber, vehicleType } = value;
 
-  // Check all collections for existing email
-  const riderExists = await Rider.riderByEmail(email);
+  const riderExists = await RiderUsecases.riderByEmail(email);
 
   if (riderExists) {
     console.error('Rider Already Exists');
     throw next(new ErrorResponse('Rider already exists', 401));
   }
 
-  const newUser = await Rider.create(value);
+  const newRider = await RiderUsecases.create(value);
 
-  const sent = sendOTP(newUser.otp, email);
+  const existingWallet = await RiderUsecases.riderWallet(newRider.rider.id);
 
-  return res.status(201).json({
-    success: true,
-    message: "Rider registered. Please verify OTP to complete registration.",
-    data: newUser,
-    sent
-  });
+  if (existingWallet) {
+    throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
+  }
+
+  const newWallet = await RiderUsecases.createNewWallet(newRider.rider.id);
+
+  newRider.rider.walletId = newWallet.id;
+
+  await newRider.rider.save();
+
+  const sent = sendOTP(newRider.otp, email);
+
+  return AppResponse(res, 201, newRider, "Rider registered. Please verify OTP to complete registration.")
 });
 
 export const login = asyncHandler(async (req, res, next) => {
@@ -54,7 +60,7 @@ export const login = asyncHandler(async (req, res, next) => {
 
   const { email, password } = value;
 
-  const user = await Rider.riderByEmail(email)
+  const user = await RiderUsecases.riderByEmail(email)
 
   if (!user || !user.password) {
     throw next(new ErrorResponse('Invalid credentials', 401));
@@ -76,8 +82,7 @@ export const login = asyncHandler(async (req, res, next) => {
 export const resendOTP = asyncHandler(async (req, res, next) => {
   const userId = req.params.id;
 
-  // Check all collections for the user
-  const rider = await Rider.riderById(userId);
+  const rider = await RiderUsecases.riderById(userId);
 
   const user = rider;
 
@@ -86,27 +91,18 @@ export const resendOTP = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse("User not found", 404));
   }
 
-  // Generate a new OTP
   const newOTP = Array(6).fill(0).map(() => Math.floor(Math.random() * 10)).join("");
 
   const hashedOTP = crypto.createHash("sha256").update(newOTP).digest("hex");
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // New expiration time: 10 minutes
-
-  // Update user with new OTP and expiry
+  const expiry = new Date(Date.now() + 10 * 60 * 1000); 
+  
   user.otp = hashedOTP;
   user.otpExpires = expiry;
   await user.save();
 
   const sent = sendOTP(newOTP, rider.email);
-
-  // Respond with success 
-  res.status(200).json({
-    success: true,
-    message: "New OTP has been sent",
-    otp: newOTP,
-    data: user.otp,
-    sent 
-  });
+ 
+  return AppResponse(res, 200, newOTP, "New OTP has been sent")
 });
 
 export const verifyOTP = asyncHandler(async (req, res, next) => {
@@ -120,42 +116,31 @@ export const verifyOTP = asyncHandler(async (req, res, next) => {
 
   const { otp } = value;
 
-  // Check rider collection for the rider
-  const rider = await Rider.riderById(riderId);
+  const rider = await RiderUsecases.riderById(riderId);
 
   if (!rider) {
     console.error("rider not found");
     throw next(new ErrorResponse("rider not found", 404));
   }
 
-  // Check if OTP has expired
   if (!rider.otpExpires || rider.otpExpires.getTime() < Date.now()) {
     console.error("OTP has expired");
     throw next(new ErrorResponse("OTP has expired", 400));
   }
 
-  // Hash the provided OTP
   const hashedOTP = crypto.createHash("sha256").update(String(otp)).digest("hex");
 
-  // Compare the hashed OTP with the stored OTP
-  console.log(hashedOTP)
-  console.log(rider.otp)
-  // console.log(rider[otp])
   if (rider.otp !== hashedOTP) {
     console.error("Invalid OTP");
     throw next(new ErrorResponse("Invalid OTP", 400));
   }
 
-  // Mark the rider as verified
   rider.isVerified = true;
-  rider.otp = undefined; // Clear the OTP
-  rider.otpExpires = undefined; // Clear OTP expiry
+  rider.otp = undefined; 
+  rider.otpExpires = undefined; 
   await rider.save();
 
-  res.status(200).json({
-    success: true,
-    message: "OTP verified successfully",
-  });
+  return AppResponse(res, 200, null, "OTP verified successfully")
 });
 
 export function oAuth(req: Request, res: Response, next: NextFunction) {
@@ -174,18 +159,15 @@ export function oAuth(req: Request, res: Response, next: NextFunction) {
       }
 
       try {
-        // Ensure required fields exist
         const { email, name, isVerified } = user;
         if (!email || !name) {
           return next(new ErrorResponse('Missing essential user fields', 400));
         }
 
-        // Generate and save token if needed
         const token = await generateToken(email);
         user.token = token;
         await user.save();
 
-        // Respond with user data
         return AppResponse(res, 200, {
             user,
             token,
@@ -208,14 +190,14 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
 
   const { email } = value;
 
-  const exists = await Rider.riderByEmail(email);
+  const exists = await RiderUsecases.riderByEmail(email);
   
   if (!exists) {
     throw next( new ErrorResponse("This Rider doesn't exists", 404));
   }
 
   const resetToken = await generateToken(email);
-  const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); // New expiration time: 1 hour
+  const expiry = new Date(Date.now() + 1 *60 * 60 * 1000); 
 
   const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
@@ -225,12 +207,7 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
 
   const sendMail = await sendResetLink(resetToken, email, 'Rider');
 
-  return res.status(200).json({
-    success: true,
-    message: 'Reset link has been sent',
-    token: resetToken,
-    sentMail: sendMail
-  });
+  return AppResponse(res, 200, resetToken, 'Reset link has been sent')
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
@@ -243,7 +220,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-  const user = await Rider.riderByResetToken(hashedToken);
+  const user = await RiderUsecases.riderByResetToken(hashedToken);
 
   if (!user) {
     throw next(new ErrorResponse('No user found', 404));
@@ -268,7 +245,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse("Passwords don't match", 400));
   }
 
-  const update = await Rider.updatePassword(user.id, newPassword);
+  const update = await RiderUsecases.updatePassword(user.id, newPassword);
 
   return res.status(203).json({
     success: true,
@@ -288,7 +265,7 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 
   const { oldPassword, newPassword, confirmPassword } = value;
 
-  const user = await Rider.riderById(id);
+  const user = await RiderUsecases.riderById(id);
 
   if (!user || !user.password) {
     throw next(new ErrorResponse('User password not found', 404));
@@ -304,13 +281,9 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse("Passwords don't match", 400));
   }
 
-  const update = await Rider.updatePassword(id, newPassword);
+  const update = await RiderUsecases.updatePassword(id, newPassword);
   
-  return res.status(203).json({
-    success: true,
-    message: 'Password has been updated',
-    data: update
-  })
+  return AppResponse(res, 200, update,  'Password has been updated')
 });
 
 export const updateProfile = asyncHandler(async (req, res, next) => {
@@ -326,7 +299,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   }
  
   // Check if user exists
-  const user = await Rider.riderById(req.body.userId);
+  const user = await RiderUsecases.riderById(req.body.userId);
   if (!user) {
     next (new ErrorResponse('User not found', 404));
   }
@@ -341,7 +314,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
       req.body.profilePic = imageUrl
     }
 
-  const userProfile = await Rider.updateProfile(req.body);
+  const userProfile = await RiderUsecases.updateProfile(req.body);
 
   return res.status(204).json({ 
     success: true, 
@@ -351,7 +324,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 });
 
 export const getAllOrders = asyncHandler(async (req, res, next) => {
-  const orders = await Rider.allOrders();
+  const orders = await RiderUsecases.allOrders();
 
   if (!orders || orders.length === 0) {
     throw next(new ErrorResponse('No orders found', 404));
@@ -371,7 +344,7 @@ export const acceptPickup = asyncHandler(async (req, res, next) => {
   }
   const { orderId, status } = value;
 
-  const order = await Rider.orderByIdAndRider(orderId, riderId);
+  const order = await RiderUsecases.orderByIdAndRider(orderId, riderId);
 
   if (!order) {
     throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
@@ -405,7 +378,7 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
   }
   const { orderId, status } = value;
 
-  const order = await Rider.orderByIdAndRider(orderId, riderId);
+  const order = await RiderUsecases.orderByIdAndRider(orderId, riderId);
 
   if (!order) {
     throw next(new ErrorResponse("Order not found or does not belong to this vendor", 404));
@@ -424,7 +397,7 @@ export const updateDeliveredStatus = asyncHandler(async (req, res, next) => {
 export const createWallet = asyncHandler(async (req, res, next) => {
   const userId = req.rider?._id as string;
 
-  const existingWallet = await Rider.riderWallet(userId);
+  const existingWallet = await RiderUsecases.riderWallet(userId);
   if (existingWallet) {
     throw next(new ErrorResponse('Wallet already exists for this customer.', 400));
   }
@@ -433,7 +406,7 @@ export const createWallet = asyncHandler(async (req, res, next) => {
     riderId: userId
   };
 
-  const newWallet = await Rider.createNewWallet(wallet);
+  const newWallet = await RiderUsecases.createNewWallet(wallet);
 
   return AppResponse(res, 201, newWallet, 'New wallet has been created');
 });
@@ -461,7 +434,7 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       riderId: user.id
     }
 
-    const pendingTransaction = await Rider.createNewTransaction(dataValues);
+    const pendingTransaction = await RiderUsecases.createNewTransaction(dataValues);
 
     const paymentResponse = await initializePayment(
       user.email,
@@ -471,7 +444,6 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
       pendingTransaction.id
     );
 
-    // Update transaction with payment reference
     pendingTransaction.reference = paymentResponse.data.reference;
     await pendingTransaction.save();
 
@@ -492,7 +464,7 @@ export const addToWallet = asyncHandler(async (req: Request, res: Response, next
 export const payAmountToRider = asyncHandler(async (req, res, next) => {
   const riderId = req.rider?._id as string; 
   const { orderId } = req.body;
-  const order = await Vendor.getOrder(riderId)
+  const order = await VendorUsecases.getOrder(riderId)
   
   if (!order || !order.riderId) {
     throw next(new ErrorResponse('Order not found.', 404));
@@ -502,12 +474,12 @@ export const payAmountToRider = asyncHandler(async (req, res, next) => {
     throw next(new ErrorResponse('Order has not been delivered or confirmed by customer', 400));
   }
 
-  const riderWallet = await Rider.riderWallet(String(order.riderId));
+  const riderWallet = await RiderUsecases.riderWallet(String(order.riderId));
   if (!riderWallet) {
     throw next(new ErrorResponse('Vendor wallet not found.', 404));
   }
 
-  const customerTransactions = await Customer.customerTransactionByOrderId(orderId)
+  const customerTransactions = await CustomerUsecases.customerTransactionByOrderId(orderId)
 
   if (!customerTransactions || customerTransactions.status !== 'pending') {
     throw next(new ErrorResponse("Transaction hasn't been made", 400));
@@ -523,7 +495,7 @@ export const payAmountToRider = asyncHandler(async (req, res, next) => {
     status: 'completed'
   }
 
-  const riderTransaction = await Rider.createNewTransaction(riderTransactValues);
+  const riderTransaction = await RiderUsecases.createNewTransaction(riderTransactValues);
 
   return AppResponse(res, 200, riderTransaction , 'Payment has been made');
 });

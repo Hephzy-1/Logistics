@@ -5,7 +5,7 @@ import { IOrder } from '../models/order';
 import { ITransaction } from '../models/transaction';
 import { IWallet } from "../models/wallet";
 
-export class Customer {
+export class CustomerUsecases {
   static async create (customer:ICustomer) {
     return await CustomerRepository.createCustomer(customer);
   }

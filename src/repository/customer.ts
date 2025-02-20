@@ -252,14 +252,22 @@ export class CustomerRepository {
     return transactions;
   }
 
-  static async updateTransaction(values: ITransaction) {
+  static async updateTransaction(values: Partial<ITransaction>) {
+    const updates: Record<string, any> = {};
+  
+    for (const key in values) {
+      if (values[key as keyof ITransaction] !== undefined) {
+        updates[key] = values[key as keyof ITransaction];
+      }
+    }
+  
     const transaction = await Transaction.findOneAndUpdate(
-      { id: values.id },
-      { $set: { status: values.status } },
-      { new: true } // Returns the updated document
+      { _id: values.id },
+      { $set: updates },
+      { new: true } 
     );
   
-    console.log('Updated transaction', transaction)
+    console.log('Updated transacrion:', transaction);
     return transaction;
   }
   
